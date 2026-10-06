@@ -22,3 +22,5 @@ dashboard/.astro/
 
 # local evidence scratch
 measurements/raw/
+.pytest-tmp/
+.npm-cache/

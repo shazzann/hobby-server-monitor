@@ -33,9 +33,25 @@ TERMINAL_STATES = ("succeeded", "failed", "cancelled")
 IDEMPOTENCY_RE = re.compile(r"^[A-Za-z0-9_-]{8,128}$")
 
 
-def request_hash(kind: str, container_id: str | None, payload: dict) -> str:
-    body = json.dumps({"kind": kind, "container_id": container_id, "payload": payload}, sort_keys=True)
+def request_hash(kind: str, container_id: str | None, request_body: dict) -> str:
+    """Hash of what the client *sent* (not the normalized payload), so a replay is
+    recognised before validation, even after the container's state has moved on."""
+    body = json.dumps({"kind": kind, "container_id": container_id, "body": request_body}, sort_keys=True)
     return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+
+def find_replay(conn: sqlite3.Connection, actor_id: str, idempotency_key: str, kind: str,
+                container_id: str | None, request_body: dict) -> sqlite3.Row | None:
+    """Existing operation for this key, or None. Same key + different request -> 409."""
+    validate_idempotency_key(idempotency_key)
+    existing = conn.execute("SELECT * FROM operations WHERE actor_id = ? AND idempotency_key = ?",
+                            (actor_id, idempotency_key)).fetchone()
+    if existing is None:
+        return None
+    if existing["request_hash"] != request_hash(kind, container_id, request_body):
+        raise Conflict("This Idempotency-Key was already used for a different request.",
+                       code="IDEMPOTENCY_KEY_REUSED")
+    return existing
 
 
 def validate_idempotency_key(key: str | None) -> str:
@@ -46,14 +62,17 @@ def validate_idempotency_key(key: str | None) -> str:
 
 
 def submit(conn: sqlite3.Connection, cfg: Config, *, actor_id: str, kind: str, container_id: str | None,
-           payload: dict, idempotency_key: str, request_id: str | None = None,
+           payload: dict, idempotency_key: str, request_body: dict | None = None, hash_scope: str | None = None,
+           request_id: str | None = None,
            target_label: str | None = None, audit_details: dict | None = None,
            before_insert: Callable[[sqlite3.Connection], None] | None = None,
            reserve: tuple[str, str | None, quotas.Res] | None = None) -> tuple[sqlite3.Row, bool]:
     """Create an operation. Returns (row, created). A replay of the same key and
     request returns the original operation with created=False."""
     validate_idempotency_key(idempotency_key)
-    rhash = request_hash(kind, container_id, payload)
+    # A create's container id is minted per request, so it must not affect replay matching.
+    rhash = request_hash(hash_scope or kind, None if kind == "create" else container_id,
+                         request_body if request_body is not None else payload)
     with write_tx(conn):
         existing = conn.execute("SELECT * FROM operations WHERE actor_id = ? AND idempotency_key = ?",
                                 (actor_id, idempotency_key)).fetchone()
