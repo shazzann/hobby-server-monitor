@@ -24,6 +24,15 @@ Only checks that were actually run are recorded as passed. Times are Asia/Colomb
 | 2026-10-06 21:4x | Auth/policy/admission/CSRF/cross-user/last-admin/creation validation | `pytest tests/test_api_security.py` | **pass** (23) |
 | 2026-10-06 21:4x | Quota accounting incl. two-thread race for one budget | `pytest tests/test_quotas.py` | **pass** (11) |
 
+| 2026-10-06 21:58 | Dashboard build, typecheck, CSP scan | `npm run check && npm run build && npm run check:csp` | **pass**: 0 TS errors; 10 HTML + 15 assets, no inline scripts/styles/handlers/external origins; JS 31.4 KiB gzip total |
+| 2026-10-06 22:00 | **UI wiring check** against the real Falcon API (Windows dev server) with a *seeded* SQLite DB and the real worker loop driving the in-memory **FakeAdapter** — not LXD evidence | browser pane + `fetch` | admin overview renders host allocation, unmanaged/unsafe labels and the honest "LXD unavailable" banner; container user sees only the assigned container, the API returns 403 for an unassigned id and the UI shows "Access denied"; detail page shows stale banner; exec as the user returned 202 → `succeeded`, ran as `hsm` (non-root), output returned verbatim (HTML payload kept as text), idempotent replay returned the same operation (200) |
+| 2026-10-06 22:00 | Defect found by the browser check | history `metrics=a,b` → 422 | Falcon 4 does not split comma-separated query values; fixed in `api/containers.py:History` + regression test `test_history_accepts_comma_separated_metrics` |
+| 2026-10-06 22:01 | Full backend suite | `pytest -q` (Windows) | **pass**: 174 passed, 1 skipped (Unix-socket test; passes on Linux 3.10 per metrics lane) |
+
+Observation: the dev server on Windows shows ~200–300 ms TCP connect time per request
+(`localhost` → IPv6 first, server bound to 127.0.0.1, wsgiref without keep-alive); server
+time-to-first-byte was 2–3 ms. Performance figures will be taken on Linux, not from this setup.
+
 ### What the security tests assert (backend/tests/test_api_security.py)
 - every route declares a policy; a responder without one fails start-up;
 - unauthenticated → 401 on private routes, `Cache-Control: no-store`;

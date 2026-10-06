@@ -124,11 +124,12 @@ function lifecycle(ctx: ViewCtx): HTMLElement {
 
 // ---------------------------------------------------------------- limits
 
-function numberField(id: string, label: string, hint: string, attrs: Record<string, string | number>): { wrap: HTMLElement; input: HTMLInputElement; err: HTMLElement } {
+function numberField(id: string, label: string, hint: string, attrs: Record<string, string | number>): { wrap: HTMLElement; input: HTMLInputElement; err: HTMLElement; hint: HTMLElement } {
   const input = h('input', { attrs: { id, type: 'number', inputmode: 'decimal', required: true, 'aria-describedby': `${id}-hint ${id}-err`, ...attrs } });
   const err = h('span', { class: 'err', attrs: { id: `${id}-err` } });
-  const wrap = h('div', { class: 'field' }, h('label', { attrs: { for: id }, text: label }), input, h('span', { class: 'hint', attrs: { id: `${id}-hint` }, text: hint }), err);
-  return { wrap, input, err };
+  const hintEl = h('span', { class: 'hint', attrs: { id: `${id}-hint` }, text: hint });
+  const wrap = h('div', { class: 'field' }, h('label', { attrs: { for: id }, text: label }), input, hintEl, err);
+  return { wrap, input, err, hint: hintEl };
 }
 
 function limitsForm(ctx: ViewCtx): HTMLElement {
@@ -168,6 +169,18 @@ function limitsForm(ctx: ViewCtx): HTMLElement {
     memF.input.value = shown.mem;
     diskF.input.value = shown.disk;
     diskF.input.min = shown.disk;
+    // Upper bounds from the server (owner quota + host capacity); the API re-validates anyway.
+    const b = c.limit_bounds;
+    const pool = l?.pool ?? '';
+    if (b) {
+      coresF.input.max = String(b.cpu_cores.max);
+      memF.input.max = String(Math.floor(b.memory_bytes.max / MiB));
+      const db = b.disk_bytes[pool];
+      if (db) diskF.input.max = String(Number((db.max / GiB).toFixed(2)));
+      coresF.hint.textContent = `Up to ${b.cpu_cores.max} with the owner's remaining quota and host capacity.`;
+      memF.hint.textContent = `Up to ${Math.floor(b.memory_bytes.max / MiB)} MiB. Reductions must stay above current use + 64 MiB.`;
+      if (db) diskF.hint.textContent = `Expansion only, up to ${Number((db.max / GiB).toFixed(2))} GiB.`;
+    }
     ack.checked = false;
     dirty = false;
     replace(changedNote);

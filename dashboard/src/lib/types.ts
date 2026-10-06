@@ -107,6 +107,8 @@ export interface Container {
 export interface ContainerDetail extends Container {
   access?: { user_id: string; email: string }[];
   capabilities: { can_manage: boolean; can_exec: boolean; exec_as: 'root' | 'hsm' | null };
+  /** Admin + managed only: live ranges with the current allocation counted as available. */
+  limit_bounds?: CreationBounds;
 }
 
 export interface Collector {
