@@ -215,7 +215,7 @@ command execution bounds; housekeeping; API listener.
 ```bash
 make test        # backend: auth, policy, quotas, worker, collector (fake LXD)
 make check-ui    # astro check + CSP check of the build
-make smoke-lxd   # real LXD on disposable hsm-smoke-* containers in project hsm only
+make smoke-lxd   # real LXD on one disposable hsm-spike-* container in project hsm only
 make measure     # CPU/RSS/PSS of the running processes
 ```
 Results, including what could not be verified: [docs/verification.md](docs/verification.md).

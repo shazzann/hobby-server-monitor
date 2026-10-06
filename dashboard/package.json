@@ -10,7 +10,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "check": "astro check",
+    "check": "astro check && tsc --noEmit",
     "check:csp": "node scripts/check-csp.mjs",
     "size": "node scripts/bundle-size.mjs",
     "verify": "npm run check && npm run build && npm run check:csp && npm run size"

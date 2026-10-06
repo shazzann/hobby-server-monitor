@@ -36,8 +36,8 @@ verify: test build-ui check-ui ## everything that runs without real LXD/Google
 dev: ## run API, worker and collector in the foreground (Ctrl-C stops all three)
 	VENV=$(VENV) bash scripts/dev.sh
 
-smoke-lxd: ## real LXD checks on disposable hsm-smoke-* containers in project hsm only
-	$(PY) scripts/lxd_smoke.py
+smoke-lxd: ## real LXD checks on one disposable hsm-spike-* container in project hsm only
+	$(PY) scripts/lxd_spike.py
 
 measure: ## sample CPU/RSS/PSS of the running app processes (see docs/verification.md)
 	$(PY) scripts/measure.py --seconds $${SECONDS_TO_SAMPLE:-600}
