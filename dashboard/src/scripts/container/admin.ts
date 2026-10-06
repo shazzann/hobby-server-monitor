@@ -19,6 +19,11 @@ export function setupAdmin(ctx: ViewCtx): void {
   const disabledNote = !c.capabilities.can_manage || !controllable(c)
     ? banner('warn', 'Controls disabled.', 'This container is unmanaged, unsafe or not active, so lifecycle, limit and access changes are disabled.')
     : null;
+  if (!c.managed && c.status === 'active') {
+    // Unmanaged containers can only be adopted; every other control stays disabled.
+    replace(area, section('Adopt into management', 'adopt', adoptPanel(ctx)));
+    return;
+  }
   replace(area,
     section('Lifecycle', 'life', disabledNote, lifecycle(ctx)),
     section('Resource limits', 'limits', limitsForm(ctx)),
@@ -423,4 +428,58 @@ function deletePanel(ctx: ViewCtx): HTMLElement {
   ctx.onUpdate(sync);
   sync(ctx.current());
   return h('div', null, h('p', { class: 'small muted', text: 'Deleting requires typing the container name.' }), btn, msg);
+}
+
+// ---------------------------------------------------------------- adoption
+
+function adoptPanel(ctx: ViewCtx): HTMLElement {
+  const c = ctx.current();
+  const box = h('div');
+  if (c.safety !== 'safe') {
+    replace(box,
+      banner('warn', 'Manual remediation required.',
+        'This container fails the safety check, so it cannot be adopted. The app never changes the configuration of another workload for you.'),
+      h('ul', {}, ...c.safety_reasons.map((r) => h('li', { text: r }))));
+    return box;
+  }
+  const o = c.observed_limits;
+  const owner = h('select', { attrs: { id: 'adopt-owner', required: true } });
+  const coresF = numberField('adopt-cores', 'CPU cores', 'Charged to the owner quota.', { min: 1, step: 1, value: o?.cpu_cores ?? 1 });
+  const allowF = numberField('adopt-allow', 'CPU allowance (%)', 'Hard cap: cores × % of CPU time per 100 ms.', { min: 10, max: 100, step: 1, value: 100 });
+  const memF = numberField('adopt-mem', 'Memory (MiB)', 'Hard limit applied on adoption.', { min: 128, step: 1, value: o?.memory_bytes ? Math.round(o.memory_bytes / MiB) : 512 });
+  const diskF = numberField('adopt-disk', 'Disk (GiB)', 'Root disk quota; cannot be smaller than the current size.', { min: 1, step: 'any', value: o?.disk_bytes ? Number((o.disk_bytes / GiB).toFixed(2)) : 4 });
+  const msg = h('div', { attrs: { 'aria-live': 'polite' } });
+  const submit = h('button', { class: 'primary', text: 'Adopt container', attrs: { type: 'submit' } });
+  const sub = new Submission();
+  const form = h('form', { attrs: { novalidate: true } },
+    h('p', { class: 'small muted', text: 'Adoption writes an identity marker and the limits below to this container, provisions the unprivileged guest account and charges the allocation to the selected owner.' }),
+    h('div', { class: 'field' }, h('label', { attrs: { for: 'adopt-owner' }, text: 'Owner' }), owner),
+    coresF.wrap, allowF.wrap, memF.wrap, diskF.wrap, h('div', { class: 'row' }, submit), msg);
+  api.get<{ users: UserRow[] }>('/api/users').then((r) => {
+    for (const u of r.users.filter((x) => x.status !== 'revoked')) owner.append(h('option', { attrs: { value: u.id }, text: `${u.email} (${u.status})` }));
+  }).catch((err) => replace(msg, errorBlock(err, 'Could not load users')));
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const body = {
+      owner_id: owner.value,
+      cpu_cores: Math.round(Number(coresF.input.value)),
+      cpu_allowance_pct: Math.round(Number(allowF.input.value)),
+      memory_bytes: Math.round(Number(memF.input.value)) * MiB,
+      disk_bytes: Math.round(Number(diskF.input.value) * 1024) * MiB,
+    };
+    setBusy(submit, true, 'Requesting…');
+    replace(msg);
+    try {
+      const res = await api.post<unknown>(`/api/containers/${enc(ctx.id)}/adopt`, body, { idempotencyKey: sub.keyFor(body) });
+      sub.settle();
+      accepted(ctx, res);
+    } catch (err) {
+      sub.settle(err);
+      replace(msg, errorBlock(err, 'Could not adopt'));
+    } finally {
+      setBusy(submit, false);
+    }
+  });
+  replace(box, form);
+  return box;
 }

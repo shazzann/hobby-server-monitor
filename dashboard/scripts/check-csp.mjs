@@ -79,4 +79,9 @@ if (problems.length) {
   for (const p of problems) console.error(`  - ${p}`);
   process.exit(1);
 }
+if (htmlCount === 0) {
+  // An empty or failed build must not pass as "clean".
+  console.error('check:csp FAILED: no HTML files found in dist/ (did the build fail?)');
+  process.exit(1);
+}
 console.log(`check:csp OK: ${htmlCount} HTML file(s) and ${files.length - htmlCount} asset(s) contain no inline scripts, inline styles, handlers or external origins.`);
