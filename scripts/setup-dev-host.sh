@@ -34,7 +34,7 @@ TARGET_USER=${SUDO_USER:-}
 
 echo "==> apt packages"
 apt-get update -qq
-DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3-venv python3-pip btrfs-progs ca-certificates curl
+DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3-venv python3-pip btrfs-progs ca-certificates curl rsync sqlite3
 
 echo "==> LXD"
 if ! snap list lxd >/dev/null 2>&1; then

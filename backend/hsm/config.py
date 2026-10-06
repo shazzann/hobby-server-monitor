@@ -38,6 +38,13 @@ def _str(name: str, default: str = "") -> str:
     return os.environ.get(name, default).strip()
 
 
+def _path(name: str, default: Path) -> Path:
+    """Relative paths are anchored at the repository root, not the process's cwd."""
+    raw = _str(name)
+    p = Path(raw).expanduser() if raw else default
+    return p if p.is_absolute() else (REPO_ROOT / p).resolve()
+
+
 def _list(name: str, default: str = "") -> tuple[str, ...]:
     return tuple(p.strip() for p in _str(name, default).split(",") if p.strip())
 
@@ -101,7 +108,7 @@ class Config:
 
 def load(env_file: str | os.PathLike | None = None) -> Config:
     _load_env_file(Path(env_file or os.environ.get("HSM_ENV_FILE", REPO_ROOT / ".env")))
-    data_dir = Path(_str("HSM_DATA_DIR", str(REPO_ROOT / "data"))).expanduser()
+    data_dir = _path("HSM_DATA_DIR", REPO_ROOT / "data")
     public_base_url = _str("PUBLIC_BASE_URL", "http://localhost:8000").rstrip("/")
     mode = _str("HSM_DEPLOYMENT_MODE", "local-http")
     uid_default = str(os.getuid()) if hasattr(os, "getuid") else "0"
@@ -117,11 +124,11 @@ def load(env_file: str | os.PathLike | None = None) -> Config:
         invitation_ttl_hours=_int("INVITATION_TTL_HOURS", 72),
         bootstrap_admin_email=_str("BOOTSTRAP_ADMIN_EMAIL").lower(),
         data_dir=data_dir,
-        sqlite_path=Path(_str("SQLITE_DB_PATH", str(data_dir / "app.db"))).expanduser(),
-        metrics_dir=Path(_str("TINYFLUX_DB_PATH", str(data_dir / "metrics"))).expanduser(),
-        history_socket=Path(_str("HSM_HISTORY_SOCKET", str(data_dir / "history.sock"))).expanduser(),
+        sqlite_path=_path("SQLITE_DB_PATH", data_dir / "app.db"),
+        metrics_dir=_path("TINYFLUX_DB_PATH", data_dir / "metrics"),
+        history_socket=_path("HSM_HISTORY_SOCKET", data_dir / "history.sock"),
         history_allowed_uids=tuple(int(u) for u in _list("HSM_HISTORY_ALLOWED_UIDS", uid_default)),
-        dashboard_dist=Path(_str("HSM_DASHBOARD_DIST", str(REPO_ROOT / "dashboard" / "dist"))).expanduser(),
+        dashboard_dist=_path("HSM_DASHBOARD_DIST", REPO_ROOT / "dashboard" / "dist"),
         lxd_socket=_str("LXD_SOCKET", "/var/snap/lxd/common/lxd/unix.socket"),
         lxd_project=_str("LXD_PROJECT", "hsm"),
         lxd_timeout_seconds=_int("LXD_TIMEOUT_SECONDS", 10),

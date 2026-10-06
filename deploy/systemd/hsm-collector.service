@@ -1,0 +1,33 @@
+[Unit]
+Description=Hobby Server Monitor metrics collector (10 s polling, TinyFlux owner)
+After=network.target snap.lxd.daemon.service
+Wants=snap.lxd.daemon.service
+
+[Service]
+Type=simple
+User=hsm-collector
+Group=hsm
+SupplementaryGroups=lxd
+EnvironmentFile=/etc/hsm/hsm.env
+Environment=HSM_ENV_FILE=/etc/hsm/hsm.env
+WorkingDirectory=/opt/hsm
+ExecStart=/opt/hsm/venv/bin/python -m hsm.collector
+# /run/hsm-collector holds the history socket (group hsm; peer UID checked in code).
+RuntimeDirectory=hsm-collector
+RuntimeDirectoryMode=0750
+UMask=0007
+Restart=always
+RestartSec=3
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+ReadWritePaths=/var/lib/hsm
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

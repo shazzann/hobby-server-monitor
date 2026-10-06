@@ -1,0 +1,33 @@
+[Unit]
+Description=Hobby Server Monitor control worker (LXD lifecycle, limits, exec)
+After=network.target snap.lxd.daemon.service
+Wants=snap.lxd.daemon.service
+
+[Service]
+Type=simple
+User=hsm-worker
+Group=hsm
+# Membership of lxd is root-equivalent on this host. This process has no
+# network listener; it only consumes validated jobs from SQLite.
+SupplementaryGroups=lxd
+EnvironmentFile=/etc/hsm/hsm.env
+Environment=HSM_ENV_FILE=/etc/hsm/hsm.env
+WorkingDirectory=/opt/hsm
+ExecStart=/opt/hsm/venv/bin/python -m hsm.worker
+UMask=0007
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+ReadWritePaths=/var/lib/hsm
+InaccessiblePaths=-/var/lib/hsm/metrics
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target

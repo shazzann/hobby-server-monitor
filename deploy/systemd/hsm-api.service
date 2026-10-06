@@ -1,0 +1,34 @@
+[Unit]
+Description=Hobby Server Monitor API (Falcon/Gunicorn; no LXD access)
+After=network.target
+Wants=hsm-collector.service hsm-worker.service
+
+[Service]
+Type=simple
+User=hsm-api
+Group=hsm
+# hsm-api is deliberately NOT in the lxd group: it cannot open the LXD socket.
+EnvironmentFile=/etc/hsm/hsm.env
+Environment=HSM_ENV_FILE=/etc/hsm/hsm.env
+WorkingDirectory=/opt/hsm
+ExecStart=/opt/hsm/venv/bin/gunicorn --config /opt/hsm/deploy/gunicorn.conf.py hsm.app:wsgi()
+UMask=0007
+Restart=on-failure
+RestartSec=2
+# Hardening (verified not to break SQLite access; see docs/verification.md)
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+ReadWritePaths=/var/lib/hsm
+InaccessiblePaths=-/var/snap/lxd -/var/lib/hsm/metrics
+MemoryMax=256M
+
+[Install]
+WantedBy=multi-user.target
