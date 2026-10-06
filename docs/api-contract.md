@@ -230,3 +230,10 @@ Shown to users as `operation.error.code` with a human `message`.
 | LXD outcome | `LXD_REJECTED`, `LXD_UNAVAILABLE` (nothing sent), `LXD_UNCERTAIN`, `LXD_NOT_CREATED`, `LXD_NOT_APPLIED`, `OUTCOME_NOT_OBSERVED`, `DELETE_NOT_APPLIED`, `LEASE_EXPIRED` |
 | Create / limits | `NAME_TAKEN`, `POOL_FULL`, `DISK_SHRINK` |
 | Exec | `NOT_RUNNING`, `EXEC_FAILED`, `EXEC_EXPIRED` (queued > 5 min), `INVALID_COMMAND`, `OUTCOME_UNKNOWN` (never replayed) |
+
+## Internal: `service_state['metrics.storage']`
+
+`{bytes, raw_from, rollup_from, removed_shards, quarantined: [[start, end]], rollup_checkpoint, dropped_ingest}`
+(`raw_from`/`rollup_from`/`rollup_checkpoint` are epoch seconds; `removed_shards` is a running count).
+The collector refuses to start (exit 2) on an uninitialized database: run `hsm init-db` first.
+Keep `HSM_HISTORY_SOCKET` on a Linux filesystem and under the ~108-byte socket path limit.

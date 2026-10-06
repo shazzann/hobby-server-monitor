@@ -9,11 +9,11 @@ from typing import Any
 from ..timeutil import utcnow_iso
 
 # Keys (the complete set; add here, not ad hoc)
-COLLECTOR_HEARTBEAT = "collector.heartbeat"   # {last_cycle_at, last_success_at, cycle_ms, missed_cycles, lxd_available, error}
+COLLECTOR_HEARTBEAT = "collector.heartbeat"   # {last_cycle_at, last_success_at, cycle_ms, missed_cycles, lxd_available, error, containers}
 WORKER_HEARTBEAT = "worker.heartbeat"         # {at, worker_id, in_flight}
-LXD_CAPABILITIES = "lxd.capabilities"         # see collector.meta.capabilities_snapshot
+LXD_CAPABILITIES = "lxd.capabilities"         # see collector.source.build_capabilities
 ROLLUP_CHECKPOINT = "metrics.rollup_checkpoint"
-METRICS_STORAGE = "metrics.storage"           # {bytes, raw_from, rollup_from, removed_shards}
+METRICS_STORAGE = "metrics.storage"           # {bytes, raw_from, rollup_from (epoch s), removed_shards, quarantined, rollup_checkpoint, dropped_ingest}
 BOOTSTRAP = "auth.bootstrap"                  # {secret_hash, expires_at, completed_at, user_id}
 
 
