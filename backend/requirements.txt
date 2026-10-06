@@ -1,9 +1,9 @@
-# Pin versions once you've chosen them. Suggested (not required) starting
-# points from the task brief's preferred stack:
-#
-# falcon
-# pylxd
-# tinyflux
-#
-# Add whatever else your implementation needs (OAuth client, WSGI/ASGI
-# server, etc.) and remove this comment block.
+# Runtime dependencies, pinned to the versions this project was tested with.
+# Python >= 3.10.
+falcon==4.4.0
+gunicorn==26.2.0
+pylxd==2.4.2
+tinyflux==1.2.0
+authlib==1.8.0
+google-auth==2.43.0
+requests==2.34.2

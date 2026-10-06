@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hsm"
+version = "0.1.0"
+description = "Hobby Server Monitor: LXD dashboard API, control worker and metrics collector"
+requires-python = ">=3.10"
+# Exact pins live in requirements.txt; this keeps the package importable.
+dependencies = ["falcon", "gunicorn", "pylxd", "tinyflux", "authlib", "google-auth", "requests"]
+
+[project.scripts]
+hsm = "hsm.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["hsm*"]
+
+[tool.setuptools.package-data]
+hsm = ["migrations/*.sql"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
