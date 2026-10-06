@@ -9,8 +9,8 @@
 | Phase | Gate | Status |
 |---|---|---|
 | 0 | Environment inspected, blockers raised, LXD spike | Inspection done; LXD spike **blocked on B1** |
-| 1 | Foundation: schema, contracts, auth, policy | In progress |
-| 2 | Lanes: collector, worker, frontend | Not started |
+| 1 | Foundation: schema, contracts, auth, policy | Done (unit-tested; real Google pending B2) |
+| 2 | Lanes: collector, worker, frontend | Code done + integrated; real LXD pending B0/B1 |
 | 3 | Real admin→create→invite→user flow | Not started |
 | 4 | Exec, limits, history, retention, accounting, audit | Not started |
 | 5 | Freeze; security/race/recovery tests | Not started |
@@ -28,4 +28,4 @@
 
 ## Next step
 
-Finish auth/API routes; brief specialists against `docs/api-contract.md`.
+See docs/agent-handoff.md "Next concrete actions".
