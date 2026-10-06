@@ -1,0 +1,56 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Accounting" current="accounting">
+  <div class="page-head">
+    <h1>Accounting</h1>
+    <button type="button" class="small" id="acc-refresh">Refresh</button>
+  </div>
+  <div id="acc-msg" aria-live="polite"></div>
+
+  <section class="section" aria-labelledby="host-title">
+    <h2 id="host-title">Host allocation</h2>
+    <p class="section-note">Allocation means configured limits of all containers (running, stopped or frozen), not live usage.
+      The budget is the host total minus a reserve kept for the host OS, LXD and this service; no container can be allocated from the reserve.
+      Pending amounts are reserved by operations that have not finished yet.</p>
+    <div id="host"></div>
+  </section>
+
+  <section class="section" aria-labelledby="inc-title" id="inc-section" hidden>
+    <h2 id="inc-title">Incomplete accounting</h2>
+    <p class="section-note">These items have missing or unlimited limits, so totals above may understate real commitments. New allocations are blocked until they get explicit limits.</p>
+    <ul id="incomplete"></ul>
+  </section>
+
+  <section class="section" aria-labelledby="own-title">
+    <h2 id="own-title">Per-owner allocation</h2>
+    <div id="owners"></div>
+  </section>
+
+  <section class="section" aria-labelledby="use-title">
+    <h2 id="use-title">Container consumption</h2>
+    <p class="section-note">Measured consumption over a period. Gaps in collection are unknown, not zero; coverage shows how much of the period was measured.</p>
+    <form id="use-form" class="row">
+      <div class="field">
+        <label for="use-container">Container</label>
+        <select id="use-container"></select>
+      </div>
+      <div class="field">
+        <label for="use-range">Period</label>
+        <select id="use-range">
+          <option value="1h">Last hour</option>
+          <option value="6h">Last 6 hours</option>
+          <option value="24h" selected>Last 24 hours</option>
+          <option value="7d">Last 7 days</option>
+          <option value="30d">Last 30 days</option>
+        </select>
+      </div>
+      <button type="submit" id="use-submit">Show</button>
+    </form>
+    <div id="use-result" aria-live="polite"></div>
+  </section>
+
+  <script>
+    import '../scripts/accounting';
+  </script>
+</Layout>

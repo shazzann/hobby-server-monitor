@@ -1,0 +1,16 @@
+---
+interface Props { kind: 'invitation' | 'bootstrap'; heading: string }
+const { kind, heading } = Astro.props;
+---
+<div class="login-wrap">
+  <section class="section" aria-labelledby="adm-title" id="admission" data-kind={kind}>
+    <h1 id="adm-title">{heading}</h1>
+    <div id="adm-status" role="status" aria-live="polite">
+      <p class="muted">Checking your link…</p>
+    </div>
+    <noscript><p>This page needs JavaScript to read the one-time link securely.</p></noscript>
+  </section>
+</div>
+<script>
+  import '../scripts/admission';
+</script>

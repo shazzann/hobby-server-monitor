@@ -129,7 +129,9 @@ class History:
     def on_get(self, req, resp, container_id):
         ctx = req.context
         start, end = _time_range(req, ctx.cfg)
-        metrics = req.get_param_as_list("metrics") or ["cpu_pct", "memory_bytes"]
+        # Falcon does not split "a,b" query values by default; split explicitly.
+        raw = req.get_param("metrics") or "cpu_pct,memory_bytes"
+        metrics = [m.strip() for m in raw.split(",") if m.strip()]
         if not metrics or len(metrics) > len(HISTORY_METRICS) or set(metrics) - set(HISTORY_METRICS):
             raise Invalid("Unknown metric.", fields={"metrics": "allowed: " + ", ".join(HISTORY_METRICS)})
         max_points = req.get_param_as_int("max_points", min_value=10, max_value=ctx.cfg.history_max_points) or 300

@@ -1,0 +1,18 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Sign in" publicPage startVisible>
+  <div class="login-wrap">
+    <section class="section" aria-labelledby="login-title">
+      <h1 id="login-title">Sign in</h1>
+      <div id="login-error"></div>
+      <div id="login-session"></div>
+      <p class="muted">Access is by invitation only. Sign in with the Google account your administrator invited.</p>
+      <p><a class="button primary" href="/auth/google/start" id="google-link">Sign in with Google</a></p>
+      <p class="small muted">If you received an invitation link, open that link first; it signs you in and activates your account.</p>
+    </section>
+  </div>
+  <script>
+    import '../scripts/login';
+  </script>
+</Layout>

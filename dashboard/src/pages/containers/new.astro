@@ -1,0 +1,92 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const sliders = [
+  { key: 'cores', label: 'CPU cores', unit: 'cores', hint: 'Logical CPU slots counted against the owner quota (accounting units, not dedicated physical cores).' },
+  { key: 'allow', label: 'CPU allowance', unit: '%', hint: 'Hard cap as a percentage of the selected cores: cores × % ms of CPU time per 100 ms.' },
+  { key: 'mem', label: 'Memory', unit: 'MiB', hint: 'Hard memory limit.' },
+  { key: 'disk', label: 'Disk', unit: 'GiB', hint: 'Root disk size on the selected pool. Can be expanded later, never shrunk.' },
+];
+---
+<Layout title="Create container" current="new">
+  <div class="page-head">
+    <h1>Create container</h1>
+    <a href="/">Back to overview</a>
+  </div>
+  <div id="new-banners" aria-live="polite"></div>
+  <form id="new-form" novalidate>
+    <section class="section" aria-labelledby="sec-basics">
+      <h2 id="sec-basics">Basics</h2>
+      <div class="grid grid-2">
+        <div class="field">
+          <label for="f-owner">Owner</label>
+          <select id="f-owner" name="owner_id" aria-describedby="f-owner-hint f-owner-err" required></select>
+          <span class="hint" id="f-owner-hint">The owner's quota is charged once. You can give other users access later.</span>
+          <span class="err" id="f-owner-err"></span>
+        </div>
+        <div class="field">
+          <label for="f-name">Name</label>
+          <input id="f-name" name="name" type="text" autocomplete="off" spellcheck="false" autocapitalize="off" required aria-describedby="f-name-hint f-name-err" />
+          <span class="hint" id="f-name-hint">Lowercase letters, digits and hyphens; starts with a letter.</span>
+          <span class="err" id="f-name-err"></span>
+        </div>
+        <div class="field">
+          <label for="f-image">Image</label>
+          <select id="f-image" name="image" required aria-describedby="f-image-err"></select>
+          <span class="err" id="f-image-err"></span>
+        </div>
+        <div class="field">
+          <label for="f-pool">Storage pool</label>
+          <select id="f-pool" name="pool" required aria-describedby="f-pool-hint f-pool-err"></select>
+          <span class="hint" id="f-pool-hint"></span>
+          <span class="err" id="f-pool-err"></span>
+        </div>
+        <div class="field">
+          <label for="f-network">Network</label>
+          <select id="f-network" name="network" required aria-describedby="f-network-err"></select>
+          <span class="err" id="f-network-err"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="sec-res">
+      <h2 id="sec-res">Resources</h2>
+      <p class="section-note" id="bounds-note">Limits below are the most you can allocate right now: the smaller of the owner's remaining quota and the host's remaining budget.</p>
+      <div class="grid grid-2">
+        {sliders.map((s) => (
+          <div class="field slider-field">
+            <label for={`f-${s.key}`} id={`f-${s.key}-label`}>{s.label} ({s.unit})</label>
+            <div class="pair">
+              <input type="range" id={`f-${s.key}-range`} aria-labelledby={`f-${s.key}-label`} aria-describedby={`f-${s.key}-hint`} tabindex="-1" />
+              <input type="number" id={`f-${s.key}`} inputmode="numeric" required aria-describedby={`f-${s.key}-hint f-${s.key}-bounds f-${s.key}-err`} />
+            </div>
+            <div class="bounds" id={`f-${s.key}-bounds`}><span data-min></span><span data-max></span></div>
+            <span class="hint" id={`f-${s.key}-hint`}>{s.hint}</span>
+            <span class="err" id={`f-${s.key}-err`}></span>
+          </div>
+        ))}
+      </div>
+      <p class="small" id="cpu-equiv" aria-live="polite"></p>
+    </section>
+
+    <section class="section" aria-labelledby="sec-opts">
+      <h2 id="sec-opts">Options</h2>
+      <label class="check"><input type="checkbox" id="f-autostart" checked /> Start automatically when the host boots (autostart)</label>
+      <label class="check"><input type="checkbox" id="f-ephemeral" /> Ephemeral: LXD deletes the container and its data when it stops</label>
+      <div class="field">
+        <label for="f-desc">Description <span class="hint">(optional)</span></label>
+        <textarea id="f-desc" rows="2" aria-describedby="f-desc-err"></textarea>
+        <span class="err" id="f-desc-err"></span>
+      </div>
+    </section>
+
+    <div id="submit-msg" aria-live="polite"></div>
+    <div class="row">
+      <button type="submit" class="primary" id="f-submit">Review and create…</button>
+      <a href="/">Cancel</a>
+    </div>
+  </form>
+  <script>
+    import '../../scripts/create';
+  </script>
+</Layout>

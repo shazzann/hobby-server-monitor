@@ -346,3 +346,19 @@ def test_static_paths_cannot_escape_dist(client, cfg):
     assert client.simulate_get("/../config.py").status_code == 404
     assert client.simulate_get("/%2e%2e/%2e%2e/etc/passwd").status_code == 404
     assert client.simulate_post("/").status_code == 405
+
+
+def test_history_accepts_comma_separated_metrics(client, conn, cfg, two_users, monkeypatch):
+    from hsm import history_client
+    owner_a, _, ca, _ = two_users
+    seen = {}
+    monkeypatch.setattr(history_client, "query", lambda cfg, req, timeout=5.0: seen.update(req) or {"ok": 1})
+    headers, _ = login(conn, cfg, owner_a)
+    r = client.simulate_get(f"/api/containers/{ca}/history",
+                            params={"range": "1h", "metrics": "cpu_pct,memory_bytes,rx_rate", "max_points": "300"},
+                            headers=headers)
+    assert r.status_code == 200, r.text
+    assert seen["metrics"] == ["cpu_pct", "memory_bytes", "rx_rate"] and seen["user_id"] == owner_a
+    r = client.simulate_get(f"/api/containers/{ca}/history", params={"range": "1h", "metrics": "cpu_pct,evil"},
+                            headers=headers)
+    assert r.status_code == 422

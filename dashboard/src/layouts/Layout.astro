@@ -1,0 +1,66 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  /** Nav key of the current page; omit on public pages (login/invite/setup). */
+  current?: 'overview' | 'users' | 'accounting' | 'activity' | 'new';
+  /** Public pages render without navigation or session controls. */
+  publicPage?: boolean;
+  /** Extra meta for pages that handle secrets (invite/setup). */
+  noReferrer?: boolean;
+  /** Render the slot visible immediately (public pages that work before any script runs). */
+  startVisible?: boolean;
+}
+
+const { title, current, publicPage = false, noReferrer = false, startVisible = false } = Astro.props;
+
+const links = [
+  { key: 'overview', href: '/', label: 'Overview', admin: false },
+  { key: 'users', href: '/users/', label: 'Users', admin: true },
+  { key: 'accounting', href: '/accounting/', label: 'Accounting', admin: true },
+  { key: 'activity', href: '/activity/', label: 'Activity', admin: true },
+] as const;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="robots" content="noindex, nofollow" />
+    {noReferrer && <meta name="referrer" content="no-referrer" />}
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>{title} · Hobby Server Monitor</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="inner">
+        <a class="brand" href="/">Hobby Server Monitor</a>
+        {!publicPage && (
+          <nav aria-label="Main">
+            <ul class="nav">
+              {links.map((l) => (
+                <li hidden={l.admin} data-admin-only={l.admin ? '' : undefined}>
+                  <a href={l.href} aria-current={current === l.key ? 'page' : undefined}>{l.label}</a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
+        {!publicPage && (
+          <div class="who" id="who" hidden>
+            <button type="button" id="logout-btn" class="small">Sign out</button>
+          </div>
+        )}
+      </div>
+    </header>
+    <main id="main" tabindex="-1">
+      <div id="page-state" aria-live="polite" hidden={startVisible}>{!startVisible && <div class="state-box" aria-busy="true">Loading…</div>}</div>
+      <div id="page-content" hidden={!startVisible}>
+        <slot />
+      </div>
+    </main>
+  </body>
+</html>

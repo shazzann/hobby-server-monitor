@@ -1,0 +1,48 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+<Layout title="Container">
+  <div class="page-head">
+    <h1 id="c-name">Container</h1>
+    <span id="c-badges" class="badges"></span>
+    <a href="/">Back to overview</a>
+  </div>
+  <div id="c-banners"></div>
+  <div id="op-panel" aria-live="polite"></div>
+
+  <section class="section" aria-labelledby="sum-title">
+    <h2 id="sum-title">Summary <span class="section-note" id="c-updated"></span></h2>
+    <div id="c-summary"></div>
+  </section>
+
+  <section class="section" aria-labelledby="hist-title">
+    <h2 id="hist-title">History</h2>
+    <div class="row">
+      <fieldset class="segmented" id="range-picker">
+        <legend class="sr-only">Time range</legend>
+        <label><input type="radio" name="range" value="1h" checked /><span>1 h</span></label>
+        <label><input type="radio" name="range" value="6h" /><span>6 h</span></label>
+        <label><input type="radio" name="range" value="24h" /><span>24 h</span></label>
+        <label><input type="radio" name="range" value="7d" /><span>7 d</span></label>
+        <label><input type="radio" name="range" value="30d" /><span>30 d</span></label>
+      </fieldset>
+      <button type="button" class="small" id="hist-refresh">Refresh</button>
+    </div>
+    <p class="small muted" id="hist-meta" aria-live="polite"></p>
+    <div id="charts" class="grid grid-2"></div>
+    <h3 id="usage-title">Usage in this period</h3>
+    <p class="section-note">Measured consumption. Gaps in collection are unknown, not zero.</p>
+    <div id="usage"></div>
+  </section>
+
+  <section class="section" aria-labelledby="exec-title" id="exec-section" hidden>
+    <h2 id="exec-title">Run a command</h2>
+    <div id="exec-body"></div>
+  </section>
+
+  <div id="admin-area" hidden></div>
+
+  <script>
+    import '../../scripts/container/view';
+  </script>
+</Layout>

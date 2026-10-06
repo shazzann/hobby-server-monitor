@@ -1,0 +1,59 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Users" current="users">
+  <div class="page-head"><h1>Users</h1></div>
+
+  <section class="section" aria-labelledby="inv-title">
+    <h2 id="inv-title">Invite a user</h2>
+    <form id="inv-form" novalidate>
+      <div class="grid grid-2">
+        <div class="field">
+          <label for="inv-email">Google email address</label>
+          <input id="inv-email" type="email" autocomplete="off" required aria-describedby="inv-email-err" />
+          <span class="err" id="inv-email-err"></span>
+        </div>
+        <div class="field">
+          <label for="inv-role">Role</label>
+          <select id="inv-role">
+            <option value="user" selected>User: sees and uses assigned containers</option>
+            <option value="admin">Administrator: full control</option>
+          </select>
+        </div>
+      </div>
+      <fieldset>
+        <legend>Quota (maximum total allocation for containers this user owns)</legend>
+        <div class="inline-inputs">
+          <div class="field">
+            <label for="inv-cores">CPU cores</label>
+            <input id="inv-cores" type="number" min="0" step="1" value="2" required aria-describedby="inv-cores-err" />
+            <span class="err" id="inv-cores-err"></span>
+          </div>
+          <div class="field">
+            <label for="inv-mem">Memory (GiB)</label>
+            <input id="inv-mem" type="number" min="0" step="0.25" value="2" required aria-describedby="inv-mem-err" />
+            <span class="err" id="inv-mem-err"></span>
+          </div>
+          <div class="field">
+            <label for="inv-disk">Disk (GiB)</label>
+            <input id="inv-disk" type="number" min="0" step="1" value="10" required aria-describedby="inv-disk-err" />
+            <span class="err" id="inv-disk-err"></span>
+          </div>
+        </div>
+      </fieldset>
+      <div class="row"><button type="submit" class="primary" id="inv-submit">Create invitation</button></div>
+      <div id="inv-msg" aria-live="polite"></div>
+    </form>
+    <div id="inv-result"></div>
+  </section>
+
+  <section class="section" aria-labelledby="users-title">
+    <h2 id="users-title">All users <span class="section-note" id="users-count"></span></h2>
+    <div id="users-msg" aria-live="polite"></div>
+    <div id="users-list"></div>
+  </section>
+
+  <script>
+    import '../scripts/users';
+  </script>
+</Layout>

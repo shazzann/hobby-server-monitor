@@ -1,0 +1,23 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Overview" current="overview">
+  <div class="page-head">
+    <h1>Overview</h1>
+    <a id="create-btn" class="button primary" href="/containers/new/" hidden>Create container</a>
+  </div>
+  <div id="collector-banner"></div>
+  <div id="refresh-banner"></div>
+  <section class="section" aria-labelledby="summary-title">
+    <h2 id="summary-title">Allocation</h2>
+    <div id="summary"><p class="muted">Loading…</p></div>
+  </section>
+  <section class="section" aria-labelledby="containers-title">
+    <h2 id="containers-title">Containers <span class="section-note" id="updated" aria-live="off"></span></h2>
+    <div class="row small muted"><span>Live values refresh every 10 seconds while this tab is visible.</span><button type="button" class="small" id="refresh">Refresh now</button></div>
+    <div id="containers"></div>
+  </section>
+  <script>
+    import '../scripts/overview';
+  </script>
+</Layout>

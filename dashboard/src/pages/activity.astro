@@ -1,0 +1,22 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="Activity" current="activity">
+  <div class="page-head">
+    <h1>Activity</h1>
+    <button type="button" class="small" id="act-refresh">Show newest</button>
+  </div>
+  <p class="section-note">Audit trail of sign-ins, changes and operations. Command text and output are not recorded here.</p>
+  <div id="act-msg" aria-live="polite"></div>
+  <section class="section" aria-labelledby="act-title">
+    <h2 id="act-title" class="sr-only">Audit events</h2>
+    <div id="act-table"></div>
+    <div class="row">
+      <button type="button" id="act-more" hidden>Load older events</button>
+      <span class="small muted" id="act-count" aria-live="polite"></span>
+    </div>
+  </section>
+  <script>
+    import '../scripts/activity';
+  </script>
+</Layout>

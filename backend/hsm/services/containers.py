@@ -118,6 +118,11 @@ def detail(conn: sqlite3.Connection, cfg: Config, principal: Principal, c: sqlit
     can_exec = bool(c["managed"]) and c["status"] == "active" and c["safety"] == "safe"
     out["capabilities"] = {"can_manage": principal.is_admin and bool(c["managed"]) and c["status"] == "active",
                            "can_exec": can_exec, "exec_as": "root" if principal.is_admin else "hsm"}
+    if principal.is_admin and c["managed"] and c["status"] == "active" and c["owner_id"]:
+        # Live ranges for the limits form; the server re-validates on submit anyway.
+        out["limit_bounds"] = quotas.bounds(
+            conn, cfg, c["owner_id"], current=quotas.Res(c["cpu_cores"], c["memory_bytes"], c["disk_bytes"]),
+            pool=c["pool"])
     if principal.is_admin:
         out["access"] = [dict(r) for r in conn.execute(
             "SELECT a.user_id, u.email FROM container_access a JOIN users u ON u.id = a.user_id"

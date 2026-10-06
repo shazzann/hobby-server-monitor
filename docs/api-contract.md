@@ -102,7 +102,9 @@ Container object (list item and detail):
 ```
 `metrics` is `null` when never observed. `stale` is true when older than
 3 collection intervals. Detail adds `"access": [{"user_id": "...", "email": "..."}]`
-(admin only) and `"capabilities": {"can_manage": bool, "can_exec": bool, "exec_as": "root"|"hsm"}`.
+(admin only), `"limit_bounds"` (admin, managed: same shape as creation `bounds`, computed with the
+container's current allocation counted as available) and
+`"capabilities": {"can_manage": bool, "can_exec": bool, "exec_as": "root"|"hsm"}`.
 
 `GET /api/containers` → `{"containers": [...], "collector": {"last_success_at": "...", "age_seconds": 4, "stale": false, "lxd_available": true}}`
 
@@ -171,6 +173,26 @@ At most 600 points per series.
 `{"host": {"known": true, "cpu": {"total", "reserve", "budget", "allocated", "pending", "remaining"}, "memory": {...}, "pools": [{"name", "driver", "total", "used", "reserve", "budget", "allocated", "pending", "remaining"}]}, "incomplete": [...], "owners": [{"user_id", "email", "quota", "allocated", "pending", "remaining"}]}`
 
 `GET /api/audit-events` → `{"events": [{"id", "at", "actor_email", "action", "target_type", "target_id", "target_label", "outcome", "details"}], "next_before_id": 123|null}`
+
+### Responses of mutating endpoints
+
+| Endpoint | Response |
+|---|---|
+| `POST /api/containers` | 202 `{"operation", "container_id"}` (200 on idempotent replay) |
+| `PATCH …/limits`, `POST …/actions`, `DELETE /api/containers/{id}`, `POST …/exec` | 202 `{"operation"}` (200 on replay) |
+| `PATCH …/owner` | 200 container detail (synchronous; body `{"owner_id": "uuid"}`) |
+| `PUT/DELETE …/assignments/{user_id}` | 204 (synchronous) |
+| `PATCH /api/users/{id}` | 200 `{"users": [...]}` |
+| `POST /api/users/{id}/revoke` | 200 `{"revoked": {sessions_revoked, grants_removed, queued_cancelled, already_dispatched}, "note"}` |
+| `DELETE /api/invitations/{id}` | 204 |
+| `POST /auth/logout` | 204 |
+
+`Idempotency-Key` is required only where an operation is created; it is ignored elsewhere.
+CSRF failures are 403 `CSRF_FAILED`; cross-origin unsafe requests are 403 `ORIGIN_REJECTED`.
+`accounting.incomplete[]` items: `{"container_id", "name", "missing": ["cpu"|"memory"|"disk"]}`.
+Audit `outcome`: `requested` | `succeeded` | `failed` | `denied`; `details` is a free-form JSON object.
+Container `status`: `creating` | `active` | `quarantined` | `failed` | `deleted`; `metrics.state`:
+`Running` | `Stopped` | `Frozen` | `Error` | `Unknown`. Description ≤ 255 printable characters.
 
 ## Static pages (Astro, served same-origin)
 
