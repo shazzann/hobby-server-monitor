@@ -19,10 +19,10 @@ Only checks that were actually run are recorded as passed. Times are Asia/Colomb
 | When | Check | Command | Result |
 |---|---|---|---|
 | 2026-10-06 21:16 | Environment inspection | `wsl … cat /etc/os-release; snap list; sudo -n true; …` | Recorded above; sudo needs a password; LXD absent |
-| 2026-10-06 21:5x | Kernel capability check | `/proc/filesystems`, `/proc/config.gz`, cgroup controllers | `CONFIG_BTRFS_FS=m`, `CONFIG_BLK_DEV_LOOP=y`, `CONFIG_CFS_BANDWIDTH=y`, cgroup2 with cpu/memory/pids → btrfs loop pool and hard CPU quota feasible (unverified until LXD exists) |
-| 2026-10-06 22:4x | Migration from empty DB, idempotent re-run, FK + WAL on | `pytest tests/test_db.py` (Windows venv) | **pass** (2) |
-| 2026-10-06 23:2x | Auth/policy/admission/CSRF/cross-user/last-admin/creation validation | `pytest tests/test_api_security.py` | **pass** (23) |
-| 2026-10-06 23:3x | Quota accounting incl. two-thread race for one budget | `pytest tests/test_quotas.py` | **pass** (11) |
+| 2026-10-06 21:2x | Kernel capability check | `/proc/filesystems`, `/proc/config.gz`, cgroup controllers | `CONFIG_BTRFS_FS=m`, `CONFIG_BLK_DEV_LOOP=y`, `CONFIG_CFS_BANDWIDTH=y`, cgroup2 with cpu/memory/pids → btrfs loop pool and hard CPU quota feasible (unverified until LXD exists) |
+| 2026-10-06 21:3x | Migration from empty DB, idempotent re-run, FK + WAL on | `pytest tests/test_db.py` (Windows venv) | **pass** (2) |
+| 2026-10-06 21:4x | Auth/policy/admission/CSRF/cross-user/last-admin/creation validation | `pytest tests/test_api_security.py` | **pass** (23) |
+| 2026-10-06 21:4x | Quota accounting incl. two-thread race for one budget | `pytest tests/test_quotas.py` | **pass** (11) |
 
 ### What the security tests assert (backend/tests/test_api_security.py)
 - every route declares a policy; a responder without one fails start-up;
