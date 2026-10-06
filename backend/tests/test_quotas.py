@@ -177,3 +177,26 @@ def test_conflicting_operations_on_one_container_are_rejected(cfg, conn):
     # Same key + same request is a replay, not a conflict.
     op, created = containers.submit_action(conn, cfg, admin, c, {"action": "restart"}, "act-key-0001", "r")
     assert created is False
+
+
+def test_adoption_requires_safe_unmanaged_and_owner_quota(cfg, conn):
+    publish_capabilities(conn)
+    admin = admin_principal(conn, cfg)
+    owner = make_user(conn, "owner@example.com", quota=(2, 2 * GIB, 10 * GIB))
+    unsafe = make_container(conn, "legacy-unsafe", managed=False, safety="unsafe")
+    safe = make_container(conn, "legacy-safe", managed=False)
+    req = {"owner_id": owner, "cpu_cores": 1, "cpu_allowance_pct": 50, "memory_bytes": GIB, "disk_bytes": 2 * GIB}
+    row = lambda cid: conn.execute("SELECT * FROM containers WHERE id = ?", (cid,)).fetchone()  # noqa: E731
+    with pytest.raises(Conflict) as exc:
+        containers.submit_adopt(conn, cfg, admin, row(unsafe), dict(req), "adopt-key-001", "r")
+    assert exc.value.code == "CONTAINER_UNSAFE"
+    with pytest.raises(Conflict) as exc:
+        containers.submit_adopt(conn, cfg, admin, row(safe), {**req, "cpu_cores": 3}, "adopt-key-002", "r")
+    assert exc.value.code == "QUOTA_EXCEEDED"
+    op, created = containers.submit_adopt(conn, cfg, admin, row(safe), dict(req), "adopt-key-003", "r")
+    assert created and op["kind"] == "adopt"
+    assert quotas.owner_pending(conn, owner) == quotas.Res(1, GIB, 2 * GIB)
+    managed = make_container(conn, "already", owner)
+    with pytest.raises(Conflict) as exc:
+        containers.submit_adopt(conn, cfg, admin, row(managed), dict(req), "adopt-key-004", "r")
+    assert exc.value.code == "ALREADY_MANAGED"

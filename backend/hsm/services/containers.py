@@ -394,3 +394,41 @@ def submit_exec(conn: sqlite3.Connection, cfg: Config, principal: Principal, c: 
                              payload={"command": command, "as_root": principal.is_admin},
                              idempotency_key=idem_key, request_body=body, request_id=request_id,
                              target_label=c["name"])
+
+
+def submit_adopt(conn: sqlite3.Connection, cfg: Config, principal: Principal, c: sqlite3.Row, body,
+                 idem_key: str, request_id: str) -> tuple[sqlite3.Row, bool]:
+    """Bring an existing, *safe* unmanaged container under management with explicit
+    limits and an owner. Unsafe containers need manual remediation first; the app
+    never "fixes" someone else's workload. The worker re-checks everything live."""
+    replay = operations.find_replay(conn, principal.user_id, idem_key, "adopt", c["id"], body)
+    if replay is not None:
+        return replay, False
+    if c["managed"] or c["status"] != "active":
+        raise Conflict("Only active, unmanaged containers can be adopted.", code="ALREADY_MANAGED")
+    if c["instance_type"] != "container":
+        raise Conflict("Virtual machines are out of scope.", code="NOT_SUPPORTED")
+    if c["safety"] != "safe":
+        raise Conflict("This container needs manual remediation before adoption: "
+                       + "; ".join(json.loads(c["safety_reasons"] or "[]")), code="CONTAINER_UNSAFE")
+    keys = {"owner_id", "cpu_cores", "cpu_allowance_pct", "memory_bytes", "disk_bytes"}
+    body = _strict(body, keys, keys)
+    owner = conn.execute("SELECT * FROM users WHERE id = ? AND status IN ('active','pending')",
+                         (body["owner_id"],)).fetchone() if isinstance(body["owner_id"], str) else None
+    if owner is None:
+        raise Invalid("Owner must be an active or invited user.", fields={"owner_id": "invalid"})
+    pool = c["observed_pool"]
+    if pool not in cfg.allowed_pools:
+        raise Conflict("The root disk is not on an allowed storage pool.", code="CONTAINER_UNSAFE")
+    cpu = _int(body, "cpu_cores", 1, 1024)
+    pct = _int(body, "cpu_allowance_pct", quotas.MIN_ALLOWANCE_PCT, 100)
+    mem = _int(body, "memory_bytes", quotas.MIN_MEMORY_BYTES, 1 << 50, MIB)
+    disk = _int(body, "disk_bytes", max(quotas.MIN_DISK_BYTES, c["observed_disk_bytes"] or 0), 1 << 55, MIB)
+    payload = {"owner_id": owner["id"], "cpu_cores": cpu, "cpu_allowance_pct": pct, "memory_bytes": mem,
+               "disk_bytes": disk}
+    # The full allocation is reserved against the owner and the host. While the job is pending the
+    # container's observed limits are also counted for the host, which errs on the safe side.
+    return operations.submit(conn, cfg, actor_id=principal.user_id, kind="adopt", container_id=c["id"],
+                             payload=payload, idempotency_key=idem_key, request_body=body, request_id=request_id,
+                             target_label=c["name"], audit_details={"owner": owner["email"], "limits": payload},
+                             reserve=(owner["id"], pool, quotas.Res(cpu, mem, disk)))

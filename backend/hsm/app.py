@@ -176,6 +176,7 @@ def routes():
         ("/api/containers/{container_id}/limits", containers_api.Limits()),
         ("/api/containers/{container_id}/actions", containers_api.Actions()),
         ("/api/containers/{container_id}/owner", containers_api.Owner()),
+        ("/api/containers/{container_id}/adopt", containers_api.Adopt()),
         ("/api/containers/{container_id}/assignments/{user_id}", containers_api.Assignment()),
         ("/api/containers/{container_id}/exec", containers_api.Exec()),
         ("/api/containers/{container_id}/history", containers_api.History()),

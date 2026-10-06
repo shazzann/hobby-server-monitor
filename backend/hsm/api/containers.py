@@ -68,6 +68,17 @@ class Actions:
         respond_operation(req, resp, op, created)
 
 
+class Adopt:
+    policies = {"POST": policy.ADMIN}
+
+    def on_post(self, req, resp, container_id):
+        ctx = req.context
+        c = policy.container_for(ctx.db, ctx.principal.user_id, container_id, "manage")
+        op, created = svc.submit_adopt(ctx.db, ctx.cfg, ctx.principal, c, read_json(req), idempotency_key(req),
+                                       ctx.request_id)
+        respond_operation(req, resp, op, created)
+
+
 class Owner:
     policies = {"PATCH": policy.ADMIN}
 
