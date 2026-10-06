@@ -10,7 +10,7 @@ from ..timeutil import utcnow_iso
 
 # Keys (the complete set; add here, not ad hoc)
 COLLECTOR_HEARTBEAT = "collector.heartbeat"   # {last_cycle_at, last_success_at, cycle_ms, missed_cycles, lxd_available, error}
-WORKER_HEARTBEAT = "worker.heartbeat"         # {at}
+WORKER_HEARTBEAT = "worker.heartbeat"         # {at, worker_id, in_flight}
 LXD_CAPABILITIES = "lxd.capabilities"         # see collector.meta.capabilities_snapshot
 ROLLUP_CHECKPOINT = "metrics.rollup_checkpoint"
 METRICS_STORAGE = "metrics.storage"           # {bytes, raw_from, rollup_from, removed_shards}

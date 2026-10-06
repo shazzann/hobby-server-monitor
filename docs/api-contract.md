@@ -219,3 +219,14 @@ The collector re-checks the user's current access in SQLite before answering.
 | `c_5m_v1` | `metrics/rollup/YYYYMMDD.csv` (daily, UTC) | `cid` | `covered_s`, `cpu_s`, `cpu_alloc_s`, `mem_bs`, `mem_max`, `disk_bs`, `disk_max`, `rx_d`, `tx_d`, `procs_max`, `samples` |
 
 Unknown field values are stored as TinyFlux `None`. Raw retention 6 h, rollups 30 days, whole-shard deletion.
+
+## Operation error codes (worker)
+
+Shown to users as `operation.error.code` with a human `message`.
+
+| Group | Codes |
+|---|---|
+| Authorization / identity | `ACTOR_NOT_AUTHORIZED`, `CONTAINER_NOT_FOUND`, `CONTAINER_UNSAFE`, `NOT_MANAGED`, `INSTANCE_MISSING`, `IDENTITY_MISMATCH`, `IDENTITY_AMBIGUOUS`, `IDENTITY_CONFLICT`, `INVALID_STATE`, `OWNER_INACTIVE`, `ALREADY_MANAGED`, `INVALID_PAYLOAD`, `INVALID_REQUEST`, `CANCELLED` |
+| LXD outcome | `LXD_REJECTED`, `LXD_UNAVAILABLE` (nothing sent), `LXD_UNCERTAIN`, `LXD_NOT_CREATED`, `LXD_NOT_APPLIED`, `OUTCOME_NOT_OBSERVED`, `DELETE_NOT_APPLIED`, `LEASE_EXPIRED` |
+| Create / limits | `NAME_TAKEN`, `POOL_FULL`, `DISK_SHRINK` |
+| Exec | `NOT_RUNNING`, `EXEC_FAILED`, `EXEC_EXPIRED` (queued > 5 min), `INVALID_COMMAND`, `OUTCOME_UNKNOWN` (never replayed) |
