@@ -94,6 +94,7 @@ class Config:
     operation_retention_days: int
     backend_host: str
     backend_port: int
+    trusted_proxy: bool
     extra: dict = field(default_factory=dict)
 
     @property
@@ -156,6 +157,7 @@ def load(env_file: str | os.PathLike | None = None) -> Config:
         operation_retention_days=_int("OPERATION_RETENTION_DAYS", 14),
         backend_host=_str("BACKEND_HOST", "127.0.0.1"),
         backend_port=_int("BACKEND_PORT", 8000),
+        trusted_proxy=_str("HSM_TRUSTED_PROXY", "false").lower() in ("1", "true", "yes"),
     )
     validate(cfg)
     return cfg

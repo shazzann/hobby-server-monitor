@@ -362,3 +362,99 @@ def test_history_accepts_comma_separated_metrics(client, conn, cfg, two_users, m
     r = client.simulate_get(f"/api/containers/{ca}/history", params={"range": "1h", "metrics": "cpu_pct,evil"},
                             headers=headers)
     assert r.status_code == 422
+
+
+# --------------------------------------------------------------------------- review regressions
+
+def test_static_redirect_is_never_protocol_relative(client, cfg):
+    (cfg.dashboard_dist / "login").mkdir(parents=True, exist_ok=True)
+    (cfg.dashboard_dist / "login" / "index.html").write_text("login")
+    r = client.simulate_get("/login")
+    assert r.status_code == 301 and r.headers["Location"] == "/login/"
+    for path in ("//evil.example/../login", "//evil.example%2F..%2Flogin", "/a%00b", "/x/../login"):
+        r = client.simulate_get(path)
+        assert r.status_code == 404, (path, r.status_code, r.headers.get("Location"))
+
+
+def test_unsupported_method_is_405_not_403(client, conn, cfg):
+    uid = make_user(conn, "u@example.com")
+    headers, csrf = login(conn, cfg, uid)
+    assert client.simulate_put("/api/me", headers=unsafe(headers, csrf)).status_code == 405
+
+
+def test_logout_expires_secure_host_cookie_in_https_mode(cfg, conn, monkeypatch):
+    import dataclasses
+    https = dataclasses.replace(cfg, deployment_mode="https", public_base_url="https://hsm.example",
+                                session_secret="x" * 40)
+    c = testing.TestClient(app_mod.create_app(https))
+    uid = make_user(conn, "u@example.com")
+    token = sessions.create(conn, https, uid)
+    csrf = sessions.resolve(conn, https, token).csrf_token
+    r = c.simulate_post("/auth/logout", headers={"Cookie": f"__Host-hsm_session={token}", "X-CSRF-Token": csrf,
+                                                 "Origin": "https://hsm.example"})
+    assert r.status_code == 204
+    cookie = r.headers["Set-Cookie"]
+    assert cookie.startswith("__Host-hsm_session=") and "Secure" in cookie and "expires=Thu, 01 Jan 1970" in cookie
+
+
+def test_non_string_pool_is_422_not_500(client, conn, cfg):
+    admin = make_user(conn, "admin@example.com", role="admin")
+    publish_capabilities(conn)
+    headers, csrf = login(conn, cfg, admin)
+    body = {"name": "web-1", "image": "hsm/alpine-3.22", "pool": ["hsm-btrfs"], "network": {"x": 1},
+            "cpu_cores": 1, "cpu_allowance_pct": 50, "memory_bytes": 256 * 1024 * 1024,
+            "disk_bytes": 2 * GIB, "owner_id": admin}
+    r = client.simulate_post("/api/containers", json=body, headers=unsafe(headers, csrf, **{"Idempotency-Key": "k" * 12}))
+    assert r.status_code == 422
+
+
+def test_revoking_actor_cancels_queued_create_and_frees_the_name(conn, cfg):
+    from hsm.services import containers as csvc, users as usvc
+    publish_capabilities(conn)
+    a = make_user(conn, "a@example.com", role="admin")
+    b = make_user(conn, "b@example.com", role="admin")
+    pb = sessions.resolve(conn, cfg, sessions.create(conn, cfg, b))
+    body = {"name": "ghost", "image": "hsm/alpine-3.22", "pool": "hsm-btrfs", "network": "hsmbr0", "cpu_cores": 1,
+            "cpu_allowance_pct": 50, "memory_bytes": 256 * 1024 * 1024, "disk_bytes": 2 * GIB, "owner_id": b}
+    op, _, cid = csvc.submit_create(conn, cfg, pb, dict(body), "ghost-key-01", "r")
+    usvc.revoke_user(conn, actor_id=a, user_id=b)
+    assert conn.execute("SELECT state FROM operations WHERE id = ?", (op["id"],)).fetchone()[0] == "cancelled"
+    assert conn.execute("SELECT status FROM containers WHERE id = ?", (cid,)).fetchone()[0] == "deleted"
+    pa = sessions.resolve(conn, cfg, sessions.create(conn, cfg, a))
+    csvc.submit_create(conn, cfg, pa, {**body, "owner_id": a}, "ghost-key-02", "r")   # name is free again
+
+
+def test_stale_row_cannot_reserve_against_the_wrong_owner(conn, cfg):
+    from hsm.errors import Conflict
+    from hsm.services import containers as csvc
+    publish_capabilities(conn)
+    admin = make_user(conn, "admin@example.com", role="admin")
+    owner = make_user(conn, "o@example.com")
+    cid = make_container(conn, "c1", owner)
+    conn.execute("INSERT INTO latest_metrics(container_id, state, sampled_at) VALUES (?, 'Running', 'x')", (cid,))
+    stale = conn.execute("SELECT * FROM containers WHERE id = ?", (cid,)).fetchone()
+    conn.execute("UPDATE containers SET version = version + 1 WHERE id = ?", (cid,))   # e.g. owner transfer committed
+    p = sessions.resolve(conn, cfg, sessions.create(conn, cfg, admin))
+    with pytest.raises(Conflict) as exc:
+        csvc.submit_action(conn, cfg, p, stale, {"action": "restart"}, "stale-key-01", "r")
+    assert exc.value.code == "VERSION_CONFLICT"
+
+
+def test_rate_limit_key_uses_proxy_appended_address_only_when_trusted(cfg):
+    import dataclasses
+    from types import SimpleNamespace
+    from hsm.api.common import client_ip
+
+    def req(cfg_, peer, xff):
+        return SimpleNamespace(context=SimpleNamespace(cfg=cfg_), remote_addr=peer,
+                               get_header=lambda name: xff)
+    assert client_ip(req(cfg, "127.0.0.1", "6.6.6.6, 1.2.3.4")) == "127.0.0.1"
+    trusted = dataclasses.replace(cfg, trusted_proxy=True)
+    assert client_ip(req(trusted, "127.0.0.1", "6.6.6.6, 1.2.3.4")) == "1.2.3.4"     # spoofed left part ignored
+    assert client_ip(req(trusted, "10.0.0.9", "1.2.3.4")) == "10.0.0.9"              # not from the local proxy
+
+
+def test_uppercase_uuid_resolves_same_object(client, conn, cfg, two_users):
+    owner_a, _, ca, _ = two_users
+    headers, _ = login(conn, cfg, owner_a)
+    assert client.simulate_get(f"/api/containers/{ca.upper()}", headers=headers).status_code == 200

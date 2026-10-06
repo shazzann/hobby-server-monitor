@@ -79,8 +79,9 @@ class AuthMiddleware:
             return
         declared = policy.declared_policy(resource, req.method)
         if declared is None:
-            if req.method in ("HEAD", "OPTIONS"):
+            if not hasattr(resource, "on_" + req.method.lower()):
                 raise falcon.HTTPMethodNotAllowed(sorted(resource.policies))
+            # A responder without a policy cannot pass start-up checks; deny if it ever happens.
             raise Forbidden("No authorization policy is declared for this route.", code="POLICY_MISSING")
         conn = req.context.db
         principal = sessions.resolve(conn, self.cfg, req.cookies.get(sessions.cookie_name(self.cfg)))
@@ -141,13 +142,22 @@ class StaticSink:
     def __call__(self, req, resp, **kwargs):
         if req.method not in ("GET", "HEAD"):
             raise falcon.HTTPMethodNotAllowed(["GET", "HEAD"])
-        rel = req.path.lstrip("/")
-        target = (self.root / rel).resolve()
+        path = req.path
+        # Reject anything that is not a plain path: '//' could become a protocol-relative
+        # redirect, '..' segments and NUL bytes have no business in a static URL.
+        if "//" in path or "\\" in path or "\x00" in path or ".." in path.split("/"):
+            raise NotFound("Not found.")
+        try:
+            target = (self.root / path.lstrip("/")).resolve()
+        except (ValueError, OSError):
+            raise NotFound("Not found.")
         if self.root != target and self.root not in target.parents:
             raise NotFound("Not found.")
         if target.is_dir():
-            if not req.path.endswith("/"):
-                raise falcon.HTTPMovedPermanently(req.path + "/")
+            if not path.endswith("/"):
+                # Built from the resolved location, never from the raw request path.
+                rel = target.relative_to(self.root).as_posix()
+                raise falcon.HTTPMovedPermanently("/" + (rel + "/" if rel != "." else ""))
             target = target / "index.html"
         if not target.is_file():
             page = self.root / "404.html"

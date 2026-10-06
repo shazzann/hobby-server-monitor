@@ -208,9 +208,12 @@ def submit_create(conn: sqlite3.Connection, cfg: Config, principal: Principal, b
     desc = body.get("description", "")
     if not isinstance(desc, str) or len(desc) > 255 or any(ord(ch) < 32 for ch in desc):
         raise Invalid("Description must be at most 255 printable characters.", fields={"description": "invalid"})
+    for key in ("image", "pool", "network", "owner_id"):
+        if not isinstance(body[key], str):
+            raise Invalid(f"{key} must be a string.", fields={key: "invalid"})
     owner_id = body["owner_id"]
     owner = conn.execute("SELECT * FROM users WHERE id = ? AND status IN ('active','pending')",
-                         (owner_id,)).fetchone() if isinstance(owner_id, str) else None
+                         (owner_id,)).fetchone()
     if owner is None:
         raise Invalid("Owner must be an active or invited user.", fields={"owner_id": "invalid"})
     opts = creation_options(conn, cfg, owner_id)
@@ -271,6 +274,19 @@ def submit_create(conn: sqlite3.Connection, cfg: Config, principal: Principal, b
     return op, created, op["container_id"]
 
 
+def _unchanged(c: sqlite3.Row):
+    """before_insert hook: the row the request was validated against must still be
+    current *inside* the write transaction (version, owner and status), otherwise the
+    reservation could be computed from stale limits or charged to the wrong owner."""
+    def check(conn: sqlite3.Connection) -> None:
+        row = conn.execute("SELECT version, owner_id, status, managed FROM containers WHERE id = ?",
+                           (c["id"],)).fetchone()
+        if row is None or (row["version"], row["owner_id"], row["status"], row["managed"]) !=                 (c["version"], c["owner_id"], c["status"], c["managed"]):
+            raise Conflict("The container changed while this request was processed; reload and retry.",
+                           code="VERSION_CONFLICT")
+    return check
+
+
 def _require_managed(c: sqlite3.Row) -> None:
     if not c["managed"] or c["status"] != "active":
         raise Conflict("Only active, app-managed containers can be changed here.", code="NOT_MANAGED")
@@ -328,7 +344,7 @@ def submit_limits(conn: sqlite3.Connection, cfg: Config, principal: Principal, c
         conn, cfg, actor_id=principal.user_id, kind="update_limits", container_id=c["id"],
         payload={"before": before, "after": after}, idempotency_key=idem_key, request_body=body,
         request_id=request_id,
-        target_label=c["name"], audit_details={"before": before, "after": after},
+        target_label=c["name"], audit_details={"before": before, "after": after}, before_insert=_unchanged(c),
         reserve=(c["owner_id"], c["pool"], delta.positive()))
     return op, created
 
@@ -353,7 +369,8 @@ def submit_action(conn: sqlite3.Connection, cfg: Config, principal: Principal, c
     payload = {"force": False} if action == "stop" else {}
     return operations.submit(conn, cfg, actor_id=principal.user_id, kind=action, container_id=c["id"],
                              payload=payload, idempotency_key=idem_key, request_body=body, hash_scope="action",
-                             request_id=request_id, target_label=c["name"], audit_details={"from_state": observed})
+                             request_id=request_id, target_label=c["name"], audit_details={"from_state": observed},
+                             before_insert=_unchanged(c))
 
 
 def submit_delete(conn: sqlite3.Connection, cfg: Config, principal: Principal, c: sqlite3.Row, confirm_name: str | None,
@@ -368,7 +385,7 @@ def submit_delete(conn: sqlite3.Connection, cfg: Config, principal: Principal, c
                        fields={"confirm_name": "must equal the container name"})
     return operations.submit(conn, cfg, actor_id=principal.user_id, kind="delete", container_id=c["id"],
                              payload={"name": c["name"]}, idempotency_key=idem_key, request_body=request_body,
-                             request_id=request_id,
+                             request_id=request_id, before_insert=_unchanged(c),
                              target_label=c["name"], audit_details={
                                  "limits": {"cpu_cores": c["cpu_cores"], "memory_bytes": c["memory_bytes"],
                                             "disk_bytes": c["disk_bytes"]}})
@@ -431,4 +448,4 @@ def submit_adopt(conn: sqlite3.Connection, cfg: Config, principal: Principal, c:
     return operations.submit(conn, cfg, actor_id=principal.user_id, kind="adopt", container_id=c["id"],
                              payload=payload, idempotency_key=idem_key, request_body=body, request_id=request_id,
                              target_label=c["name"], audit_details={"owner": owner["email"], "limits": payload},
-                             reserve=(owner["id"], pool, quotas.Res(cpu, mem, disk)))
+                             before_insert=_unchanged(c), reserve=(owner["id"], pool, quotas.Res(cpu, mem, disk)))

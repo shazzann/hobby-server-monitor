@@ -41,7 +41,14 @@ def respond_operation(req, resp, op, created: bool, **extra) -> None:
 
 
 def client_ip(req) -> str:
-    # The socket peer only. X-Forwarded-For is client-controlled unless a trusted proxy
-    # rewrites it, so it must not key a rate limit. Behind the local proxy every client
-    # shares one bucket, which errs on the strict side.
+    """Key for rate limits. Without a proxy: the socket peer. With HSM_TRUSTED_PROXY
+    (the API bound to 127.0.0.1 behind the documented proxy): the *rightmost*
+    X-Forwarded-For entry, i.e. the address the proxy itself appended. Entries to its
+    left are client-supplied and are never trusted."""
+    cfg = req.context.cfg
+    if cfg.trusted_proxy and req.remote_addr in ("127.0.0.1", "::1"):
+        xff = req.get_header("X-Forwarded-For") or ""
+        last = xff.split(",")[-1].strip()
+        if last:
+            return last[:64]
     return req.remote_addr or "unknown"

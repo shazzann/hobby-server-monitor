@@ -77,6 +77,7 @@ def container_for(conn: sqlite3.Connection, user_id: str, container_id: str, nee
     user = active_user(conn, user_id)
     if not is_uuid(container_id):
         raise NotFound("Container not found.")
+    container_id = container_id.lower()
     c = conn.execute("SELECT * FROM containers WHERE id = ? AND status != 'deleted'",
                      (container_id,)).fetchone()
     if c is None:
@@ -100,6 +101,7 @@ def operation_for(conn: sqlite3.Connection, user_id: str, operation_id: str) -> 
     user = active_user(conn, user_id)
     if not is_uuid(operation_id):
         raise NotFound("Operation not found.")
+    operation_id = operation_id.lower()
     op = conn.execute("SELECT * FROM operations WHERE id = ?", (operation_id,)).fetchone()
     if op is None:
         raise NotFound("Operation not found.")

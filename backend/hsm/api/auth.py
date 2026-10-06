@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
 
 import falcon
 
@@ -13,6 +14,7 @@ from .common import client_ip, read_json
 
 log = logging.getLogger("hsm.auth")
 BINDING_MAX_AGE = int(oidc.TRANSACTION_TTL.total_seconds())
+EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
 def _set_binding(req, resp, value: str) -> None:
@@ -46,8 +48,9 @@ class AdmissionContext:
 
     def on_post(self, req, resp):
         cfg, conn = req.context.cfg, req.context.db
+        # Per client only: the secrets are 256-bit, so a global cap would add no protection
+        # and would let one client lock everybody out of accepting invitations.
         ratelimit.check(conn, f"admission:{client_ip(req)}", limit=10, window_seconds=600)
-        ratelimit.check(conn, "admission:global", limit=100, window_seconds=600)
         body = read_json(req)
         kind, secret = body.get("kind"), body.get("secret")
         if kind not in ("invitation", "bootstrap") or set(body) - {"kind", "secret"}:
@@ -102,5 +105,8 @@ class Logout:
     def on_post(self, req, resp):
         cfg = req.context.cfg
         sessions.revoke(req.context.db, req.context.principal.session_id)
-        resp.unset_cookie(sessions.cookie_name(cfg), path="/")
+        # unset_cookie() omits Secure, which browsers require to overwrite a __Host- cookie.
+        # (Falcon omits max_age=0 as falsy, so expire it with a past date.)
+        resp.set_cookie(sessions.cookie_name(cfg), "", expires=EPOCH, path="/", secure=cfg.secure_cookies,
+                        http_only=True, same_site="Lax")
         resp.status = falcon.HTTP_204

@@ -1,0 +1,11 @@
+# HTTPS front end for non-local access (HSM_DEPLOYMENT_MODE=https, HSM_TRUSTED_PROXY=true,
+# PUBLIC_BASE_URL=https://hsm.example.lan). Caddy obtains/renews the certificate; for a LAN-only
+# name use `tls internal` and trust Caddy's local CA on the client machines.
+#
+# Caddy >= 2.5 does not trust X-Forwarded-For from clients unless trusted_proxies is set, so the
+# value it forwards ends with the real client address, which the API uses for rate limiting.
+hsm.example.lan {
+	encode gzip
+	reverse_proxy 127.0.0.1:8000
+	# tls internal
+}

@@ -175,10 +175,14 @@ def cancel_queued(conn: sqlite3.Connection, *, actor_id: str | None = None, cont
     if container_id:
         clauses.append("container_id = ?")
         args.append(container_id)
-    ids = [r[0] for r in conn.execute(f"SELECT id FROM operations WHERE {' AND '.join(clauses)}", args)]
-    for op_id in ids:
-        set_state(conn, op_id, "cancelled", error_code="CANCELLED", error_message=reason)
-    return len(ids)
+    rows = conn.execute(f"SELECT id, kind, container_id FROM operations WHERE {' AND '.join(clauses)}", args).fetchall()
+    for r in rows:
+        set_state(conn, r["id"], "cancelled", error_code="CANCELLED", error_message=reason)
+        if r["kind"] == "create" and r["container_id"]:
+            # Nothing reached LXD: the placeholder row must not keep the name or show as "creating".
+            conn.execute("UPDATE containers SET status = 'deleted', deleted_at = ? WHERE id = ? AND status = 'creating'",
+                         (utcnow_iso(), r["container_id"]))
+    return len(rows)
 
 
 def purge(conn: sqlite3.Connection, cfg: Config) -> None:
