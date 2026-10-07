@@ -1,0 +1,56 @@
+{
+  "mode": "systemd-cgroup",
+  "duration_s": 300.0,
+  "interval_s": 1.0,
+  "cpu_unit": "% of one logical CPU",
+  "logical_cpus": 10,
+  "units": {
+    "hsm-api": {
+      "cpu_pct": {
+        "avg": 0.21,
+        "peak": 6.315
+      },
+      "memory_current_mib": {
+        "avg": 38.21,
+        "peak": 39.453
+      },
+      "anon_mib": {
+        "avg": 36.899,
+        "peak": 37.031
+      }
+    },
+    "hsm-worker": {
+      "cpu_pct": {
+        "avg": 0.037,
+        "peak": 0.557
+      },
+      "memory_current_mib": {
+        "avg": 11.741,
+        "peak": 12.008
+      },
+      "anon_mib": {
+        "avg": 10.297,
+        "peak": 10.297
+      }
+    },
+    "hsm-collector": {
+      "cpu_pct": {
+        "avg": 0.073,
+        "peak": 1.652
+      },
+      "memory_current_mib": {
+        "avg": 23.983,
+        "peak": 24.48
+      },
+      "anon_mib": {
+        "avg": 21.228,
+        "peak": 21.23
+      }
+    }
+  },
+  "totals_avg": {
+    "cpu_pct": 0.32,
+    "memory_current_mib": 73.934,
+    "anon_mib": 68.424
+  }
+}

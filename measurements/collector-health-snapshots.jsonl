@@ -1,0 +1,3 @@
+{"at": "08:55:14Z", "label": "before-no-tabs", "cycle_ms": 22, "missed_cycles": 0, "containers": 2, "lxd_available": true}
+{"at": "09:01:29Z", "label": "after-no-tabs", "cycle_ms": 21, "missed_cycles": 0, "containers": 2, "lxd_available": true}
+{"at": "09:07:13Z", "label": "after-five-tabs", "cycle_ms": 20, "missed_cycles": 0, "containers": 2, "lxd_available": true}

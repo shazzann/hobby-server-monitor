@@ -84,17 +84,43 @@ visible to WSL; LXD 5.21.8 with a btrfs loop pool. Python 3.10.12.
 100 % = one logical CPU; RSS from `VmRSS`; PSS from `smaps_rollup` (shared pages divided among
 sharers, so PSS totals are the fair sum — RSS totals double-count shared libraries).
 
+**A. Same code run as the developer user** (`/proc` sampling; PSS available):
+
 | Scenario | Duration | CPU avg (all app processes) | PSS total | RSS total | Raw data |
 |---|---|---|---|---|---|
 | Idle, 2 running containers, no browser | 600 s | **0.11 %** of one CPU | **82.2 MiB** | 125.5 MiB | `measurements/idle-2-containers-600s.json` |
-| One dashboard tab | 300 s | _pending_ | | | `measurements/one-tab-300s.json` |
-| Five dashboard tabs | 300 s | _pending_ | | | |
+| One visible dashboard tab | 300 s | **0.15 %** | 82.8 MiB | 126.2 MiB | `measurements/one-tab-300s.json` |
 
 Per process (idle): API master 12.8 MiB PSS, API worker 31.0 MiB PSS, collector 26.3 MiB PSS,
 worker 12.1 MiB PSS; collector CPU 0.06 %, worker 0.03 %, API 0.02 %.
 
-One visible tab: 9 API requests and ≈19 KB (uncompressed) in its first minute — 3 on load, then one
-`/api/containers` every 10 s.
+**B. Installed systemd services** (`scripts/measure.py --systemd`: per-unit cgroup `cpu.stat` and
+`memory.current`/`anon`; reading other users' PSS would need root):
+
+| Scenario | Duration | Total CPU | API | Worker | Collector | Memory (cgroup / anon) | Raw data |
+|---|---|---|---|---|---|---|---|
+| No tabs, 2 containers | 300 s | **0.14 %** | 0.03 % | 0.03 % | 0.08 % | 72.2 / 67.8 MiB | `measurements/systemd-no-tabs-300s.json` |
+| **Five visible tabs** | 300 s | **0.32 %** | 0.21 % | 0.04 % | **0.07 %** | 73.9 / 68.4 MiB | `measurements/systemd-five-tabs-300s.json` |
+
+The collector's cost does not change with open tabs (0.077 % → 0.073 %); its cycle time stayed
+20–22 ms with 0 missed cycles (`measurements/collector-health-snapshots.jsonl`). Only the API's cost
+grows: each *visible* tab makes one `/api/containers` request per 10 s (hidden tabs make none).
+
+**Network per tab:** one visible tab made 9 API requests (≈19 KB uncompressed) in its first minute —
+3 on load, then one poll every 10 s; five tabs made 47 requests (≈72 KB).
+
+**Payloads** (`measurements/http-payloads.json`; 4 series per chart, `max_points=300`):
+
+| Request | Points/series | Bytes | gzip | p50 / p95 |
+|---|---|---|---|---|
+| `/api/containers` (2 containers) | — | 2,630 | 796 | 1.4 / 2.1 ms |
+| history 1 h (raw, 20 s) | 181 | 14,901 | 868 | 3.3 / 4.9 ms |
+| history 24 h (5-min rollups) | 289 | 23,536 | 1,237 | 3.4 / 4.3 ms |
+| history 30 d | 299 | 24,334 | 1,576 | 3.5 / 4.0 ms |
+
+Caveats: containers were young, so most long-range points were still null (gzip sizes will grow with
+real values; uncompressed size is set by point count); repeated requests hit the collector's small
+result cache. Collection cost scaling beyond 2 containers was not measured (a cycle took 20–46 ms).
 
 ## Known Limitations
 
