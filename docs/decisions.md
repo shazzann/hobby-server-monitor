@@ -107,6 +107,10 @@ so two racing requests are serialized by SQLite's write lock (`tests/test_quotas
 At the limit the request is rejected with 409 and refreshed bounds; nothing running is killed.
 An uncertain LXD outcome keeps its reservation until reconciliation proves the state.
 
+When an admin creates a container on behalf of a non-admin user, that owner is also granted
+access in the same transaction (an ordinary, removable grant). Found during the real browser run:
+without it, a user saw their quota consumed by a container they could not see.
+
 **Rejected.** Measuring quota by instantaneous usage (a stopped container would free quota it can
 reclaim on start); charging every assigned user (double counting).
 

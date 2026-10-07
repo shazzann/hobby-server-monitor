@@ -80,9 +80,20 @@ sudo bash deploy/install.sh
 ```bash
 make bootstrap     # or, with systemd: sudo -u hsm-worker env HSM_ENV_FILE=/etc/hsm/hsm.env /opt/hsm/venv/bin/hsm bootstrap
 ```
-Open the printed `http://localhost:8000/setup/#…` link (valid 30 minutes, once) and sign in
-with the `BOOTSTRAP_ADMIN_EMAIL` Google account. Then invite users from **Users**; each invitation
-link is shown once and must be opened by the invited Google account.
+Paste the printed `http://localhost:8000/setup/#…` link (valid 30 minutes, once — the part after
+`#` matters) into the browser and sign in with the `BOOTSTRAP_ADMIN_EMAIL` Google account. Do not use
+the normal "Sign in with Google" button for this first login: without the setup link it is refused
+as `NOT_INVITED`.
+
+### 1.9 How quotas, owners and access fit together
+- **Quota** is a per-user budget (cores, memory, disk). Everyone starts at 0, the first admin too.
+- **Owner**: each container is charged to exactly one user's quota, chosen at creation.
+- **Access**: who can see and use a container. Free (charges no quota). A non-admin owner gets
+  access automatically; anyone else is added on the container page → Access.
+
+Typical order: set the owner's quota (Users) → create the container for that owner → optionally
+give other users access → they sign in and see only their containers. Invite users from **Users**;
+each invitation link is shown once and must be opened by the invited Google account.
 
 ## 2. Architecture
 

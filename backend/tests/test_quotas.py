@@ -200,3 +200,16 @@ def test_adoption_requires_safe_unmanaged_and_owner_quota(cfg, conn):
     with pytest.raises(Conflict) as exc:
         containers.submit_adopt(conn, cfg, admin, row(managed), dict(req), "adopt-key-004", "r")
     assert exc.value.code == "ALREADY_MANAGED"
+
+
+def test_create_for_a_user_grants_the_owner_access_admin_owner_not(cfg, conn):
+    publish_capabilities(conn)
+    admin = admin_principal(conn, cfg)
+    owner = make_user(conn, "owner@example.com")
+    _, _, cid = containers.submit_create(conn, cfg, admin, body(owner, "for-user"), "grant-key-001", "r")
+    rows = conn.execute("SELECT user_id, granted_by FROM container_access WHERE container_id = ?", (cid,)).fetchall()
+    assert [tuple(r) for r in rows] == [(owner, admin.user_id)]
+    conn.execute("UPDATE users SET quota_cpu_cores = 4, quota_memory_bytes = ?, quota_disk_bytes = ? WHERE id = ?",
+                 (4 * GIB, 20 * GIB, admin.user_id))
+    _, _, cid2 = containers.submit_create(conn, cfg, admin, body(admin.user_id, "for-admin"), "grant-key-002", "r")
+    assert conn.execute("SELECT COUNT(*) FROM container_access WHERE container_id = ?", (cid2,)).fetchone()[0] == 0

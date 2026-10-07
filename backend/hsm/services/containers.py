@@ -260,6 +260,11 @@ def submit_create(conn: sqlite3.Connection, cfg: Config, principal: Principal, b
             " VALUES (?, ?, ?, ?, 1, 'creating', 'unknown', ?, ?, ?, ?, ?, ?, ?)",
             (container_id, cfg.lxd_project, name, container_id, owner_id, body["pool"],
              image.get("description", ""), int(ephemeral), int(autostart), desc, utcnow_iso()))
+        if owner["role"] != "admin":
+            # The owner pays for the container, so by default they can also see and use it.
+            # This is an ordinary grant: the admin can remove it like any other.
+            c.execute("INSERT INTO container_access(container_id, user_id, granted_by, granted_at) VALUES (?, ?, ?, ?)",
+                      (container_id, owner_id, principal.user_id, utcnow_iso()))
 
     try:
         op, created = operations.submit(
