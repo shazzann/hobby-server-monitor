@@ -1,0 +1,77 @@
+{
+  "duration_s": 300.0,
+  "interval_s": 1.0,
+  "cpu_unit": "% of one logical CPU",
+  "logical_cpus": 10,
+  "processes": [
+    {
+      "pid": 6360,
+      "role": "api",
+      "cpu_pct": {
+        "avg": 0.01,
+        "peak": 1.0
+      },
+      "rss_mib": {
+        "avg": 22.94,
+        "peak": 22.94
+      },
+      "pss_mib": {
+        "avg": 12.84,
+        "peak": 12.84
+      }
+    },
+    {
+      "pid": 6361,
+      "role": "api",
+      "cpu_pct": {
+        "avg": 0.05,
+        "peak": 1.99
+      },
+      "rss_mib": {
+        "avg": 44.43,
+        "peak": 44.45
+      },
+      "pss_mib": {
+        "avg": 31.55,
+        "peak": 31.57
+      }
+    },
+    {
+      "pid": 6358,
+      "role": "collector",
+      "cpu_pct": {
+        "avg": 0.06,
+        "peak": 2.0
+      },
+      "rss_mib": {
+        "avg": 38.32,
+        "peak": 38.32
+      },
+      "pss_mib": {
+        "avg": 26.35,
+        "peak": 26.36
+      }
+    },
+    {
+      "pid": 6359,
+      "role": "worker",
+      "cpu_pct": {
+        "avg": 0.03,
+        "peak": 1.0
+      },
+      "rss_mib": {
+        "avg": 20.5,
+        "peak": 20.5
+      },
+      "pss_mib": {
+        "avg": 12.1,
+        "peak": 12.1
+      }
+    }
+  ],
+  "totals": {
+    "cpu_avg": 0.15,
+    "rss_avg_mib": 126.19,
+    "pss_avg_mib": 82.84
+  }
+}
