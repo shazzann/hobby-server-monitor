@@ -1,26 +1,27 @@
 # Final Report — Hobby Server Monitor
 
-Status at the time of writing: **draft, being completed during the sprint**. Every number below
-was measured on the machine described in "Resource Measurements"; anything not yet verified is
-marked as such. Evidence log: [docs/verification.md](docs/verification.md).
+Every number below was measured on the machine described in "Resource Measurements"; anything not
+verified is listed under "Known Limitations". Evidence log with commands and timestamps:
+[docs/verification.md](docs/verification.md).
 
 ## Time Spent
 
-Sprint started 2026-10-06 21:16 (Asia/Colombo). Work was done by an AI coding agent (lead) plus
-three parallel specialist sub-agents for ~25 minutes each, under the candidate's supervision;
-wall-clock time and agent effort overlap, so both are given.
+Sprint start 2026-10-06 21:16 (Asia/Colombo). The code was written by an AI coding agent (lead) and,
+for about 20–25 minutes each, three specialist sub-agents running **in parallel**, plus one read-only
+reviewer sub-agent; the candidate supervised, supplied the environment (disk space, LXD install,
+Google OAuth, sudo steps) and ran the manual checks. Wall-clock time and agent effort overlap.
 
-| Area | Wall-clock (approx.) | Notes |
+| Period (wall clock) | Duration | Work |
 |---|---|---|
-| Environment inspection, LXD host script, blockers | 0.5 h | WSL2 + systemd present; LXD absent; C: drive full (resolved by the candidate) |
-| Backend foundation, auth, policy, quotas, API | 1.0 h (lead) | in parallel with the three lanes below |
-| LXD adapter, worker, exec (control specialist) | ~0.3 h | parallel |
-| Collector, TinyFlux, history socket (metrics specialist) | ~0.4 h | parallel |
-| Astro dashboard (frontend specialist) | ~0.4 h | parallel |
-| Security cross-review + fixes | 0.3 h | 5 confirmed defects fixed |
-| Waiting for host prerequisites (disk, LXD install, OAuth) | overnight | not counted as work |
-| Real-LXD verification, E2E, browser checks, measurements | 1.0 h+ | 2026-10-07 from 06:20 |
-| Documentation / report | ongoing | |
+| 10-06 21:16–22:15 | ~1.0 h | Environment inspection and blockers; schema, config, auth/OIDC, sessions, policy, quotas, operation queue, admin API (lead); LXD adapter + worker + exec, collector + TinyFlux + history socket, Astro dashboard (three parallel sub-agents); integration; security cross-review and fixes; UI wiring checks against a fake LXD |
+| 10-06 22:15 → 10-07 06:20 | — | Paused: waiting for disk space, LXD installation and OAuth credentials (not work time) |
+| 10-07 06:20–07:00 | ~0.7 h | Real LXD: spike, CPU/disk quota and exec checks, end-to-end API and browser flows, collector independence, idle/one-tab measurements; 3 defects fixed |
+| 10-07 10:30–11:50 | ~1.3 h | Real Google bootstrap and invitation with the candidate's accounts; candidate's browser walkthrough; fixes for issues the candidate hit (quota message, owner access, reinstatement, flaky test) |
+| 10-07 13:40–14:45 | ~1.1 h | systemd install, reboot recovery, privilege-boundary check, clean-checkout checks, systemd measurements, report |
+| **Total active** | **≈ 4.1 h** | of which ≈ 1.2 h was the candidate's interactive steps |
+
+Rough split of the active time: backend/auth/API 25 %, LXD integration/worker 15 %, collector/TSDB
+10 %, dashboard 10 %, real-environment verification and debugging 25 %, documentation/report 15 %.
 
 ## Key Decisions
 
@@ -57,6 +58,12 @@ Real ones, in order (details in docs/ai-usage.md and docs/verification.md):
 - LXD reports nanosecond timestamps; Python 3.10 cannot parse them → uptime showed "unknown"
   (found on real LXD).
 - A CSP checker passed on an empty build → it now fails when no HTML is found.
+- Candidate-reported: a fresh admin with zero quota saw "Insufficient capacity" (misleading) → the form
+  now says whose quota is the limit; a user could not see a container charged to them → the owner now
+  gets access automatically; a revoked user could not be re-invited → reinstatement via a new
+  invitation for the same Google account; a collector test failed only on hosts up for > 1 h → fixed.
+- systemd install: a non-existent per-user group and Gunicorn 26's control socket in a missing home
+  directory broke the first install → fixed; a boot-order race with LXD's socket → ordering + recovery log.
 
 ## What You Learned
 
@@ -70,7 +77,10 @@ Real ones, in order (details in docs/ai-usage.md and docs/verification.md):
 - Default-deny route registry with a start-up check; import-boundary test for the API.
 - Durable, idempotent operations with reconciliation of uncertain LXD outcomes.
 - systemd units with separate service users; Caddy config for HTTPS mode.
-- CI workflow; 185 backend tests; CSP check of the frontend build; measurement scripts.
+- CI workflow (not yet run on GitHub); 187 backend tests; CSP check of the frontend build;
+  measurement scripts for `/proc` and systemd cgroups; `deploy/check-permissions.sh` proving the API
+  cannot reach the LXD socket.
+- Reinstating a revoked user, bound to the same Google account.
 
 ## Resource Measurements
 
@@ -124,10 +134,34 @@ result cache. Collection cost scaling beyond 2 containers was not measured (a cy
 
 ## Known Limitations
 
-(Being completed; see docs/interview-walkthrough.md §5.)
+Unfinished, untested or deliberately cut — be explicit about these in the interview:
 
-- Real Google sign-in not yet performed (pending the candidate's OAuth client).
-- systemd deployment and reboot recovery not yet exercised on this host.
+- **Scale:** exercised with 2–3 containers on one host. Collection took 20–46 ms per cycle; behaviour at
+  tens of containers (cycle time, TinyFlux scan time, SQLite write load) was not measured.
+- **HTTPS mode** (`HSM_DEPLOYMENT_MODE=https`, `deploy/Caddyfile`, `HSM_TRUSTED_PROXY`) is implemented
+  and unit-tested (Secure `__Host-` cookies) but was not deployed; all real runs used `http://localhost`.
+- **Terminal:** one command at a time, no PTY, no persistent `cd`. Commands run as root (admins) can leave
+  background processes behind (the `timeout` wrapper kills only the foreground process); for normal
+  users every uid-1500 process is killed after each command (verified).
+- **Memory reduction** checks current use + 64 MiB headroom, but the guest can still allocate between
+  the check and the change. Disk is expansion-only (btrfs cannot safely shrink online).
+- **External rename** of an LXD instance is handled by the identity marker but was only tested with a
+  fake LXD source; external deletion was observed for real (two test containers → tombstoned).
+- **Boot race:** right after a WSL boot the collector once got `EACCES` from LXD's socket; units are now
+  ordered after `snap.lxd.daemon.unix.socket` and recovery is logged, but a second reboot to confirm the
+  ordering was not done. The collector retries every 10 s regardless.
+- **WSL:** WSL stops the distro and these services shortly after the last terminal closes; a native
+  Ubuntu host does not.
+- **Backup/restore** is documented (SQLite backup API, stop collector to copy metrics) but not tested.
+- **Invitations** are shared as a one-time link; no email is sent. Reinstatement of a revoked user is
+  only possible for the same Google account.
+- **Accounting:** unmanaged containers without CPU/memory limits block new allocations until adopted or
+  covered by `HSM_EXTERNAL_RESERVE_*`; this is deliberate but strict.
+- **Residual privilege risk:** the worker and collector hold root-equivalent LXD access; the API and
+  worker share SQLite, so a compromised API can queue jobs (the worker re-validates them).
+- **Not implemented (P2):** snapshots, alerts, metric export, persistent web terminal, multi-host.
+- **`hsm test-session`** (local-http only) exists for browser tests and measurements; it is a local
+  operator command that requires write access to the database, and is audited.
 
 ## AI Tool Usage
 
