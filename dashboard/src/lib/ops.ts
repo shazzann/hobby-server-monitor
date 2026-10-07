@@ -15,7 +15,9 @@ export function watchOperation(id: string, onUpdate: (op: Operation) => void, on
     maxBackoffMs: 15_000,
     task: async (signal) => {
       try {
-        const op = await api.get<Operation>(`/api/operations/${enc(id)}`, { signal });
+        // GET /api/operations/{id} returns {"operation": {...}} (docs/api-contract.md).
+        const op = asOperation(await api.get<unknown>(`/api/operations/${enc(id)}`, { signal }));
+        if (!op) throw new ApiError(0, 'BAD_RESPONSE', 'Unexpected operation response.');
         onUpdate(op);
         return !isTerminal(op.state);
       } catch (err) {
