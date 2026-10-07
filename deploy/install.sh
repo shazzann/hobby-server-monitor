@@ -12,6 +12,7 @@
 #   - /etc/hsm/hsm.env configuration, root:hsm 0640 (contains secrets)
 #   - /var/lib/hsm     SQLite (root:hsm 2770); metrics/ is collector-only (0700)
 #   - systemd units, enabled at boot.
+#   - optional: HSM_IMPORT_FROM=<dev data dir> imports an existing app.db (+ metrics) once.
 # It never touches LXD configuration.
 set -euo pipefail
 
@@ -58,6 +59,17 @@ rm -f /etc/hsm/hsm.env.new
 echo "==> state directories"
 install -d -o root -g hsm -m 2770 /var/lib/hsm
 install -d -o hsm-collector -g hsm-collector -m 0700 /var/lib/hsm/metrics
+
+if [[ -n "${HSM_IMPORT_FROM:-}" && ! -e /var/lib/hsm/app.db ]]; then
+  # Optional one-time import of a development data dir (stop the dev processes first).
+  echo "==> importing $HSM_IMPORT_FROM"
+  sqlite3 "$HSM_IMPORT_FROM/app.db" ".backup '/var/lib/hsm/app.db'"     # consistent copy even with WAL
+  chown hsm-worker:hsm /var/lib/hsm/app.db && chmod 0660 /var/lib/hsm/app.db
+  if [[ -d "$HSM_IMPORT_FROM/metrics" ]]; then
+    cp -a "$HSM_IMPORT_FROM/metrics/." /var/lib/hsm/metrics/
+    chown -R hsm-collector:hsm-collector /var/lib/hsm/metrics
+  fi
+fi
 
 echo "==> database migration (explicit, once, before services start)"
 sudo -u hsm-worker sh -c 'umask 007; HSM_ENV_FILE=/etc/hsm/hsm.env /opt/hsm/venv/bin/hsm init-db'
