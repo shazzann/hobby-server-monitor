@@ -14,3 +14,6 @@ accesslog = None          # request paths are logged by the reverse proxy if nee
 errorlog = "-"
 loglevel = "info"
 umask = 0o007             # SQLite WAL/SHM files must stay group-writable for the hsm group
+# Gunicorn >= 25.1 opens a runtime control socket in $XDG_RUNTIME_DIR or ~/.gunicorn by default.
+# The hsm-api service user has neither, and we do not want an extra local control surface.
+control_socket_disable = True

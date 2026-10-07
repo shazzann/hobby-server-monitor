@@ -58,7 +58,7 @@ rm -f /etc/hsm/hsm.env.new
 
 echo "==> state directories"
 install -d -o root -g hsm -m 2770 /var/lib/hsm
-install -d -o hsm-collector -g hsm-collector -m 0700 /var/lib/hsm/metrics
+install -d -o hsm-collector -g hsm -m 0700 /var/lib/hsm/metrics
 
 if [[ -n "${HSM_IMPORT_FROM:-}" && ! -e /var/lib/hsm/app.db ]]; then
   # Optional one-time import of a development data dir (stop the dev processes first).
@@ -67,7 +67,7 @@ if [[ -n "${HSM_IMPORT_FROM:-}" && ! -e /var/lib/hsm/app.db ]]; then
   chown hsm-worker:hsm /var/lib/hsm/app.db && chmod 0660 /var/lib/hsm/app.db
   if [[ -d "$HSM_IMPORT_FROM/metrics" ]]; then
     cp -a "$HSM_IMPORT_FROM/metrics/." /var/lib/hsm/metrics/
-    chown -R hsm-collector:hsm-collector /var/lib/hsm/metrics
+    chown -R hsm-collector:hsm /var/lib/hsm/metrics
   fi
 fi
 
