@@ -14,6 +14,12 @@ master and worker. Definitions used in the report:
   counted in full for every process, so RSS totals overstate real use.
 - PSS: proportional set size (/proc/<pid>/smaps_rollup). Shared pages are
   divided among the processes sharing them; PSS totals are the fair sum.
+  Reading it for another user's process needs root.
+
+With --systemd (installed services), it samples each unit's cgroup instead:
+CPU from cpu.stat usage_usec (all processes of the unit, incl. Gunicorn's
+master and worker) and memory from memory.current (anon + page cache charged
+to the unit) and memory.stat anon. No root needed.
 """
 from __future__ import annotations
 
@@ -65,12 +71,64 @@ def kib(path: str, key: str) -> int | None:
     return None
 
 
+UNITS = ("hsm-api", "hsm-worker", "hsm-collector")
+
+
+def cgroup_read(unit: str) -> tuple[int, int, int] | None:
+    d = f"/sys/fs/cgroup/system.slice/{unit}.service"
+    try:
+        with open(f"{d}/cpu.stat") as f:
+            usec = next(int(l.split()[1]) for l in f if l.startswith("usage_usec"))
+        with open(f"{d}/memory.current") as f:
+            cur = int(f.read())
+        with open(f"{d}/memory.stat") as f:
+            anon = next(int(l.split()[1]) for l in f if l.startswith("anon "))
+        return usec, cur, anon
+    except (OSError, StopIteration, ValueError):
+        return None
+
+
+def measure_systemd(seconds: float, interval: float) -> dict:
+    last = {u: (cgroup_read(u), time.monotonic()) for u in UNITS}
+    if not any(v[0] for v in last.values()):
+        raise SystemExit("no hsm-* systemd units found under /sys/fs/cgroup/system.slice")
+    data = {u: {"cpu": [], "mem": [], "anon": []} for u in UNITS}
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        time.sleep(interval)
+        for u in UNITS:
+            cur, now = cgroup_read(u), time.monotonic()
+            prev, prev_t = last[u]
+            if cur and prev:
+                data[u]["cpu"].append(100.0 * (cur[0] - prev[0]) / 1e6 / (now - prev_t))
+                data[u]["mem"].append(cur[1] / 1048576)
+                data[u]["anon"].append(cur[2] / 1048576)
+            last[u] = (cur, now)
+
+    def summ(v):
+        return {"avg": round(statistics.fmean(v), 3), "peak": round(max(v), 3)} if v else None
+    units = {u: {"cpu_pct": summ(d["cpu"]), "memory_current_mib": summ(d["mem"]), "anon_mib": summ(d["anon"])}
+             for u, d in data.items()}
+    total = {k: round(sum((units[u][k] or {}).get("avg", 0) for u in UNITS), 3)
+             for k in ("cpu_pct", "memory_current_mib", "anon_mib")}
+    return {"mode": "systemd-cgroup", "duration_s": seconds, "interval_s": interval,
+            "cpu_unit": "% of one logical CPU", "logical_cpus": os.cpu_count(), "units": units, "totals_avg": total}
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--seconds", type=float, default=600)
     ap.add_argument("--interval", type=float, default=1.0)
     ap.add_argument("--json")
+    ap.add_argument("--systemd", action="store_true", help="sample the installed units' cgroups")
     args = ap.parse_args()
+    if args.systemd:
+        out = json.dumps(measure_systemd(args.seconds, args.interval), indent=2)
+        print(out)
+        if args.json:
+            with open(args.json, "w") as f:
+                f.write(out + "\n")
+        return
 
     procs = find_processes()
     if not procs:

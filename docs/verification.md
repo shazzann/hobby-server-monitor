@@ -59,6 +59,8 @@ time-to-first-byte was 2–3 ms. Performance figures will be taken on Linux, not
 | 2026-10-07 13:58 | **LXD privilege boundary** | `sudo bash deploy/check-permissions.sh` (candidate) | **pass** — `hsm-api`: `DENIED 13 Permission denied` on the LXD socket; `hsm-worker` and `hsm-collector`: `CONNECTED`, also inside a transient unit with the collector's full sandbox options |
 | 2026-10-07 13:58 | Boot-order race observed | collector journal | at boot (1 s after start) the collector got `Permission denied` from LXD's socket although the same user connects later inside the same sandbox → units now ordered `After=snap.lxd.daemon.unix.socket`; collector logs "LXD reachable again after N failed cycle(s)"; installer restarts units on re-run |
 | 2026-10-07 13:5x | WSL observation | uptime reset between two checks | WSL stops the distro (and the services) shortly after the last terminal closes, even with systemd; keep a terminal open for demos. Native Ubuntu is unaffected |
+| 2026-10-07 14:05 | **README clean checkout — backend** (fresh `git clone` into /tmp in WSL) | `make venv`, `make init-db`, `make test`, `hsm serve-dev`, `hsm bootstrap` | **pass** — pinned install ok; empty machine → schema v1; 187 passed; API live, `/api/me` 401 without session; clone has no `.env`; bootstrap refuses until `BOOTSTRAP_ADMIN_EMAIL` is set |
+| 2026-10-07 14:09 | **README clean checkout — frontend** (fresh clone, Windows Node 22 because WSL has no Node) | `npm ci`, `npm run check`, `npm run build`, `npm run check:csp` | **pass** — 0 vulnerabilities, 0 type errors, build complete, CSP check OK (10 HTML, 15 assets) |
 
 pylxd 2.4.2 prints a harmless `UserWarning: unknown attribute "requestor" on Operation` with LXD 5.21.
 
