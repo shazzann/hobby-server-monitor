@@ -1,0 +1,82 @@
+[
+  {
+    "path": "/api/containers",
+    "bytes": 2630,
+    "gzip_bytes": 796,
+    "points_per_series": null,
+    "resolution_s": null,
+    "p50_ms": 1.4,
+    "p95_ms": 2.1,
+    "mean_ms": 1.8
+  },
+  {
+    "path": "/api/containers/6ea21b79-4314-4e29-97c1-1ae27bfcf9c3/history?range=1h",
+    "bytes": 14901,
+    "gzip_bytes": 868,
+    "points_per_series": {
+      "cpu_pct": 181,
+      "memory_bytes": 181,
+      "rx_rate": 181,
+      "tx_rate": 181
+    },
+    "resolution_s": 20,
+    "p50_ms": 3.3,
+    "p95_ms": 4.9,
+    "mean_ms": 3.5
+  },
+  {
+    "path": "/api/containers/6ea21b79-4314-4e29-97c1-1ae27bfcf9c3/history?range=24h",
+    "bytes": 23536,
+    "gzip_bytes": 1237,
+    "points_per_series": {
+      "cpu_pct": 289,
+      "memory_bytes": 289,
+      "rx_rate": 289,
+      "tx_rate": 289
+    },
+    "resolution_s": 300,
+    "p50_ms": 3.4,
+    "p95_ms": 4.3,
+    "mean_ms": 3.5
+  },
+  {
+    "path": "/api/containers/6ea21b79-4314-4e29-97c1-1ae27bfcf9c3/history?range=7d",
+    "bytes": 23537,
+    "gzip_bytes": 1355,
+    "points_per_series": {
+      "cpu_pct": 289,
+      "memory_bytes": 289,
+      "rx_rate": 289,
+      "tx_rate": 289
+    },
+    "resolution_s": 2100,
+    "p50_ms": 3.4,
+    "p95_ms": 4.5,
+    "mean_ms": 3.6
+  },
+  {
+    "path": "/api/containers/6ea21b79-4314-4e29-97c1-1ae27bfcf9c3/history?range=30d",
+    "bytes": 24334,
+    "gzip_bytes": 1576,
+    "points_per_series": {
+      "cpu_pct": 299,
+      "memory_bytes": 299,
+      "rx_rate": 299,
+      "tx_rate": 299
+    },
+    "resolution_s": 8700,
+    "p50_ms": 3.5,
+    "p95_ms": 4.0,
+    "mean_ms": 3.6
+  },
+  {
+    "path": "/api/containers/6ea21b79-4314-4e29-97c1-1ae27bfcf9c3/usage?range=24h",
+    "bytes": 221,
+    "gzip_bytes": 155,
+    "points_per_series": null,
+    "resolution_s": null,
+    "p50_ms": 3.1,
+    "p95_ms": 3.9,
+    "mean_ms": 3.1
+  }
+]
