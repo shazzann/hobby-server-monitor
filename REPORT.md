@@ -130,7 +130,7 @@ formula and the exec deadline/cleanup logic.
 - Default-deny route registry with a start-up check; import-boundary test for the API.
 - Durable, idempotent operations with reconciliation of uncertain LXD outcomes.
 - systemd units with separate service users; Caddy config for HTTPS mode.
-- CI workflow (not yet run on GitHub); 187 backend tests; CSP check of the frontend build;
+- CI workflow (GitHub Actions: backend on Python 3.10 and 3.12, dashboard check/build/CSP — passing); 187 backend tests; CSP check of the frontend build;
   measurement scripts for `/proc` and systemd cgroups; `deploy/check-permissions.sh` proving the API
   cannot reach the LXD socket.
 - Reinstating a revoked user, bound to the same Google account.

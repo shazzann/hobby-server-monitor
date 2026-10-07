@@ -13,6 +13,5 @@ Updated: 2026-10-07 14:45 +05:30
 - All lanes integrated; tests: Linux 3.10 187 passed; Windows 186 passed + 1 skipped (Unix socket).
 
 ## Next concrete actions
-1. B4: with approval, `gh repo create shazzann/hobby-server-monitor --private --source . --push`.
-2. Optional: second WSL reboot to confirm the LXD socket ordering (look for no `LXD unavailable`).
-3. Candidate: "What You Learned", demo, submission email.
+1. Optional: second WSL reboot to confirm the LXD socket ordering (look for no `LXD unavailable`).
+2. Candidate: "What You Learned", demo, submission email.

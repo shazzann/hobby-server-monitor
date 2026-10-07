@@ -62,6 +62,7 @@ time-to-first-byte was 2–3 ms. Performance figures will be taken on Linux, not
 | 2026-10-07 14:05 | **README clean checkout — backend** (fresh `git clone` into /tmp in WSL) | `make venv`, `make init-db`, `make test`, `hsm serve-dev`, `hsm bootstrap` | **pass** — pinned install ok; empty machine → schema v1; 187 passed; API live, `/api/me` 401 without session; clone has no `.env`; bootstrap refuses until `BOOTSTRAP_ADMIN_EMAIL` is set |
 | 2026-10-07 14:09 | **README clean checkout — frontend** (fresh clone, Windows Node 22 because WSL has no Node) | `npm ci`, `npm run check`, `npm run build`, `npm run check:csp` | **pass** — 0 vulnerabilities, 0 type errors, build complete, CSP check OK (10 HTML, 15 assets) |
 | 2026-10-07 14:25–14:37 | **Footprint of the installed systemd services**, no tabs vs five visible tabs (headless Playwright, admin test session) | `python3 scripts/measure.py --systemd --seconds 300` ×2; `/api/health` snapshots | no tabs: total CPU 0.14 %, cgroup memory 72.2 MiB; five tabs: total 0.32 % (API 0.03 → 0.21 %), collector 0.077 → 0.073 %, cycle 20–22 ms, 0 missed cycles, 47 API requests/≈72 KB in the first minute |
+| 2026-10-07 14:57 | **GitHub Actions CI** on the first push (run 37600686046) | `.github/workflows/ci.yml` | **pass** — backend (3.10), backend (3.12), dashboard |
 
 pylxd 2.4.2 prints a harmless `UserWarning: unknown attribute "requestor" on Operation` with LXD 5.21.
 

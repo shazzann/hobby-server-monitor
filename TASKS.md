@@ -17,7 +17,7 @@
 
 ## Remaining (needs the candidate)
 
-- [ ] Decide on GitHub: create a private repo and push (B4).
+- [x] GitHub: private repo https://github.com/shazzann/hobby-server-monitor created and pushed; CI green.
 - [ ] Write "What You Learned" in REPORT.md in your own words.
 - [ ] Record a short demo (optional but useful).
 - [ ] Share the repository with dev@roboticgen.co and reply to the task email.
