@@ -115,7 +115,10 @@ def test_validate_clamps_to_config_max(cfg):
 def test_store_thread_runs_requests_and_flushes_on_stop(cfg, conn):
     st = MetricsStore(cfg)
     st.open()
-    th = StoreThread(st, maintain_every=3600)
+    # Test data is pinned to T (1 Oct 2026). Maintenance applies retention against the *real*
+    # clock and runs on the thread's first loop, so it would delete these "old" raw shards
+    # whenever host uptime exceeds maintain_every. Disable it here; retention has its own tests.
+    th = StoreThread(st, maintain_every=float("inf"))
     th.start()
     assert th.submit_ingest([(A, t, {"dt": 10.0, "cpu_pct": 1.0}) for t in range(T, T + 100, 10)])
     pts = th.call(lambda s: s._raw_points(A, T, T + 100), timeout=5)
@@ -150,7 +153,7 @@ def test_socket_round_trip_and_error_mapping(cfg, setup, monkeypatch):
     # some filesystems (e.g. WSL drvfs) cannot hold sockets.
     sock_path = Path(tempfile.gettempdir()) / f"hsm-{uuid.uuid4().hex[:12]}.sock"
     sock_cfg = dataclasses.replace(cfg, history_socket=sock_path, history_allowed_uids=(os.getuid(),))
-    th = StoreThread(setup["store"].store, maintain_every=3600)
+    th = StoreThread(setup["store"].store, maintain_every=float("inf"))   # see the note above
     th.start()
     server = HistoryServer(sock_cfg, th)
     server.start()
