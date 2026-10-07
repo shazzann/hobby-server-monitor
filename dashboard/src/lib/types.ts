@@ -170,6 +170,8 @@ export interface CreationOptions {
   owners: { id: string; email: string }[];
   bounds: CreationBounds;
   name_rule: string;
+  /** Quota summary of the selected owner (all values in bytes / cores). */
+  owner_quota: { quota: ResourceTriple; allocated: ResourceTriple; pending: ResourceTriple; remaining: ResourceTriple } | null;
 }
 
 export interface UserRow {

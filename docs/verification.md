@@ -48,6 +48,10 @@ time-to-first-byte was 2–3 ms. Performance figures will be taken on Linux, not
 | 2026-10-07 06:31 | Defect found in the browser | detail page showed "Operation undefined in progress" | `lib/ops.ts:watchOperation` treated the `{"operation": …}` envelope as the operation, so `state` was undefined and polling never stopped (also affected the exec result panel); fixed with `asOperation` + explicit error on an unexpected shape |
 | 2026-10-07 06:33 | **Browser: container-user journey** (Playwright) | admin assigns via Access panel; switch to the user session | user nav shows only *Overview* and own quota (2/2 cores allocated); command panel ran `id; echo "<b>bold?</b>"; ls /root; exit 2` → ran as `uid=1500(hsm)`, exit 2, stderr `ls: can't open '/root': Permission denied`, the `<b>` text rendered literally (0 `<b>` elements in the output); `GET /api/users` as the user → 403 |
 | 2026-10-07 06:3x | Hidden-pane observation | in-app browser pane hidden | while the pane is hidden the page's `visibilityState` is `hidden`: polling pauses by design, and the `<dialog>` close event was not delivered, so UI checks were run in headless Playwright instead |
+| 2026-10-07 10:32–10:38 | **Real Google sign-in, plain login before any user exists** (candidate's account) | browser → `/login/` → "Sign in with Google" | denied `NOT_INVITED` twice (audit `auth.login denied`); expected: the setup link had not been used, and the first setup link had expired at 07:21 |
+| 2026-10-07 10:41 | **Real Google bootstrap of the first Admin** | `hsm bootstrap` → candidate opened `/setup/#…` → Google | `/setup/` → `POST /auth/admission-context` → callback → session; audit `auth.bootstrap_admin succeeded`, `auth.login succeeded path=bootstrap`; user row `admin/active` bound to the Google `sub` |
+| 2026-10-07 11:00 | **Real Google invitation of a second account** | Admin UI → Users → Invite (2 cores, 2 GiB, 10 GiB) → link opened as the invited Google account | audit `user.invite`, `user.invitation_accepted`, `auth.login succeeded path=invitation`; user row `user/active` |
+| 2026-10-07 11:03 | UX defect found by the candidate | create form for an owner with zero quota said "Insufficient capacity" | creation options now include `owner_quota`; the form distinguishes "owner has no quota / quota used up" (link to Users) from "insufficient host capacity" |
 
 pylxd 2.4.2 prints a harmless `UserWarning: unknown attribute "requestor" on Operation` with LXD 5.21.
 
@@ -81,6 +85,5 @@ replaced); a real Google sign-in has not been performed yet (blocked: B2).
 
 | Check | Status | Blocker |
 |---|---|---|
-| Real Google sign-in with two accounts | not run | B2, B3 |
 | Collector/worker/frontend lanes | in progress | — |
 | Resource measurements | not run | needs LXD |

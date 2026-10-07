@@ -154,6 +154,8 @@ def creation_options(conn: sqlite3.Connection, cfg: Config, owner_id: str | None
     return {"options_version": hashlib.sha256(version_src.encode()).hexdigest()[:16],
             "images": images, "pools": pools, "networks": networks, "owners": owners,
             "bounds": bounds, "name_rule": NAME_RULE,
+            # Lets the form say *which* limit applies (owner quota vs host capacity).
+            "owner_quota": quotas.owner_summary(conn, owner_id) if owner_id else None,
             "project": cfg.lxd_project, "capabilities_observed_at": caps.get("observed_at")}
 
 

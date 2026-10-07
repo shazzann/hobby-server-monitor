@@ -126,7 +126,8 @@ with `fields` and refreshed `bounds` under `error.bounds`.
             "memory_bytes": {"min": 134217728, "max": 0, "step": 1048576},
             "disk_bytes": {"hsm-btrfs": {"min": 1073741824, "max": 0, "step": 1048576}},
             "blocked_reason": null},
- "name_rule": "^[a-z][a-z0-9-]{0,61}[a-z0-9]$"}
+ "name_rule": "^[a-z][a-z0-9-]{0,61}[a-z0-9]$",
+ "owner_quota": {"quota": {...}, "allocated": {...}, "pending": {...}, "remaining": {...}}}
 ```
 
 `PATCH /api/containers/{id}/limits` (Idempotency-Key):

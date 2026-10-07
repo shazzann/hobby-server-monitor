@@ -145,8 +145,24 @@ async function main(): Promise<void> {
     const nodes: HTMLElement[] = [];
     const blocked = opts?.bounds.blocked_reason;
     if (blocked) nodes.push(banner('bad', 'Creation is blocked.', blocked));
+    // Say which limit applies: the owner's quota (fixable on the Users page) or the host's capacity.
+    const q = opts?.owner_quota;
+    const quotaUnits: Partial<Record<Key, number>> = q
+      ? { cores: q.remaining.cpu_cores ?? 0, mem: Math.floor((q.remaining.memory_bytes ?? 0) / MiB), disk: Math.floor((q.remaining.disk_bytes ?? 0) / GiB) }
+      : {};
+    const ownerEmail = opts?.owners.find((o) => o.id === owner.value)?.email ?? 'the owner';
+    const quotaShort: string[] = [];
     for (const s of Object.values(sliders)) {
-      if (s.max < s.min) nodes.push(banner('warn', 'Insufficient capacity.', `${labelOf(s.key)}: at most ${s.label(Math.max(0, s.max))} remains, below the minimum of ${s.label(s.min)}.`));
+      if (s.max >= s.min) continue;
+      const qv = quotaUnits[s.key];
+      if (qv !== undefined && qv < s.min) quotaShort.push(`${labelOf(s.key)}: ${s.label(Math.max(0, qv))} of quota left`);
+      else nodes.push(banner('warn', 'Insufficient host capacity.', `${labelOf(s.key)}: at most ${s.label(Math.max(0, s.max))} is unallocated on the host, below the minimum of ${s.label(s.min)}.`));
+    }
+    if (quotaShort.length) {
+      const none = !!q && !q.quota.cpu_cores && !q.quota.memory_bytes && !q.quota.disk_bytes;
+      nodes.unshift(banner('warn', none ? `${ownerEmail} has no quota yet.` : `${ownerEmail}'s quota is used up.`,
+        `${quotaShort.join('; ')}. Quotas are set per user on the `, h('a', { attrs: { href: '/users/' }, text: 'Users page' }),
+        ' (this includes administrators), or choose another owner.'));
     }
     replace(banners, ...nodes);
   }
