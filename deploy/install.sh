@@ -77,7 +77,9 @@ sudo -u hsm-worker sh -c 'umask 007; HSM_ENV_FILE=/etc/hsm/hsm.env /opt/hsm/venv
 echo "==> systemd units"
 install -m 0644 /opt/hsm/deploy/systemd/hsm-*.service /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now hsm-collector.service hsm-worker.service hsm-api.service
+systemctl enable hsm-collector.service hsm-worker.service hsm-api.service
+# restart (not just start) so a re-run after an upgrade loads the new code and units
+systemctl restart hsm-collector.service hsm-worker.service hsm-api.service
 sleep 3
 systemctl --no-pager --lines=0 status hsm-collector hsm-worker hsm-api || true
 

@@ -117,7 +117,7 @@ def test_stripped_marker_without_identity_evidence_is_quarantined(cfg, conn):
     assert len(live_rows(conn)) == 1
 
 
-def test_lxd_outage_keeps_running_and_does_not_tombstone(cfg, conn):
+def test_lxd_outage_keeps_running_and_does_not_tombstone(cfg, conn, caplog):
     cid = make_container(conn, "web")
     src = FakeSource([make_instance("web", marker=cid)])
     c, clk = Collector(cfg, conn, src), Clock()
@@ -129,8 +129,11 @@ def test_lxd_outage_keeps_running_and_does_not_tombstone(cfg, conn):
     assert row(conn, cid)["status"] == "active"
     assert conn.execute("SELECT 1 FROM latest_metrics WHERE container_id = ?", (cid,)).fetchone()  # kept, ages stale
     src.fail = False
+    caplog.set_level("INFO", logger="hsm.collector")
     hb = clk.tick(c)
     assert hb["lxd_available"] is True and row(conn, cid)["status"] == "active"
+    # Recovery is logged once, so the journal shows when LXD came back (e.g. after a boot race).
+    assert "LXD reachable again after 3 failed cycle(s)" in caplog.text
 
 
 def test_active_operation_blocks_tombstone_and_creating_rows_untouched(cfg, conn):

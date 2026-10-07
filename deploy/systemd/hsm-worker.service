@@ -1,7 +1,7 @@
 [Unit]
 Description=Hobby Server Monitor control worker (LXD lifecycle, limits, exec)
-After=network.target snap.lxd.daemon.service
-Wants=snap.lxd.daemon.service
+After=network.target snap.lxd.daemon.unix.socket snap.lxd.daemon.service
+Wants=snap.lxd.daemon.unix.socket
 
 [Service]
 Type=simple

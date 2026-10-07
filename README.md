@@ -73,8 +73,12 @@ make dev           # API on http://localhost:8000, worker, collector
 ```
 Production-style (systemd, separate service users, starts at boot):
 ```bash
-sudo bash deploy/install.sh
+sudo bash deploy/install.sh                     # add HSM_IMPORT_FROM=<dev data dir> to keep dev data
+sudo bash deploy/check-permissions.sh           # proves hsm-api cannot reach the LXD socket
 ```
+WSL note: WSL stops the distro (and these services) shortly after the last terminal window
+closes, even with systemd enabled. Keep an Ubuntu terminal open while using it; a native Ubuntu
+host has no such limitation.
 
 ### 1.8 First admin
 ```bash

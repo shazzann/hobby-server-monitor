@@ -70,6 +70,7 @@ class Collector:
         self._caps_at: float | None = None
         self._reported: set = set()
         self._rlog = RateLimitedLog(log)
+        self._failed_cycles = 0          # consecutive cycles without LXD, for the recovery log line
 
     def _refresh_capabilities(self, mono: float) -> None:
         if self._caps_at is not None and mono - self._caps_at < CAPABILITIES_EVERY:
@@ -99,6 +100,7 @@ class Collector:
             # LXD down: keep the process and the history, tombstone nothing,
             # leave latest_metrics to age into "stale".
             self._rlog.warning("LXD unavailable: %s", exc)
+            self._failed_cycles += 1
             now = wall or datetime.now(timezone.utc)
             hb = self._heartbeat(cycle_at=iso(now), started=started, lxd_available=False,
                                  error="LXD unavailable", containers=0)
@@ -106,6 +108,9 @@ class Collector:
                 state.put(self.conn, state.COLLECTOR_HEARTBEAT, hb)
             return hb
 
+        if self._failed_cycles:
+            log.info("LXD reachable again after %d failed cycle(s)", self._failed_cycles)
+            self._failed_cycles = 0
         mono = time.monotonic() if mono is None else mono
         wall = (wall or datetime.now(timezone.utc)).astimezone(timezone.utc).replace(microsecond=0)
         now_iso = iso(wall)
