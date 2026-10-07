@@ -95,6 +95,10 @@ with the variable set cannot mint another admin.
 Admission requires the secret, an open invitation, Google `email_verified`, and an exact email match;
 the account is then bound to Google's immutable `sub`. Returning users are matched by `sub` only.
 
+Revocation is reversible only through a fresh invitation accepted by the *same* Google `sub`
+(`auth/admission.py:_invitation`), so an admin can undo a mistake without letting whoever controls
+the email address later inherit the old identity, containers or audit history.
+
 **Rejected.** Matching by email on every login (email changes / third-party addresses); automatic
 email delivery (P2; the admin shares the link).
 

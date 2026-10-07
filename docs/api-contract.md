@@ -166,7 +166,9 @@ At most 600 points per series.
 
 `POST /api/invitations` `{"email": "u@x.com", "role": "user", "quota": {"cpu_cores": 2, "memory_bytes": ..., "disk_bytes": ...}}`
 → 201 `{"invitation": {"id", "email", "expires_at"}, "user_id": "...", "link": "http://localhost:8000/invite/#<secret>"}`
-(the link is shown once; only its hash is stored).
+(the link is shown once; only its hash is stored). Re-inviting a **revoked** user is allowed and
+reinstates them on acceptance, but only for the same Google account (`sub`) bound before; the user
+stays revoked until then, and access grants removed at revocation are not restored.
 
 `PATCH /api/users/{id}` `{"role"?: "admin"|"user", "quota"?: {...}}` — last active admin cannot be demoted (409 `LAST_ADMIN`).
 

@@ -458,3 +458,37 @@ def test_uppercase_uuid_resolves_same_object(client, conn, cfg, two_users):
     owner_a, _, ca, _ = two_users
     headers, _ = login(conn, cfg, owner_a)
     assert client.simulate_get(f"/api/containers/{ca.upper()}", headers=headers).status_code == 200
+
+
+def test_revoked_user_can_be_reinstated_only_by_the_same_google_account(client, conn, cfg, monkeypatch):
+    secret = _invite(client, conn, cfg, email="back@example.com")
+    r = _admission(client, "invitation", secret)
+    ok = _callback(client, monkeypatch, r.json["authorize_url"], r.cookies["hsm_oauth"].value,
+                   {"sub": "g-back", "email": "back@example.com"})
+    assert ok.headers["Location"] == "/"
+    uid = conn.execute("SELECT id FROM users WHERE email = 'back@example.com'").fetchone()[0]
+    admin = conn.execute("SELECT id FROM users WHERE role = 'admin'").fetchone()[0]
+    a_headers, a_csrf = login(conn, cfg, admin)
+    assert client.simulate_post(f"/api/users/{uid}/revoke", headers=unsafe(a_headers, a_csrf)).status_code == 200
+    # Re-invite: allowed; the account stays revoked until the link is accepted.
+    r = client.simulate_post("/api/invitations", headers=unsafe(a_headers, a_csrf),
+                             json={"email": "back@example.com", "role": "user",
+                                   "quota": {"cpu_cores": 1, "memory_bytes": GIB, "disk_bytes": GIB}})
+    assert r.status_code == 201, r.text
+    secret2 = r.json["link"].split("#", 1)[1]
+    assert conn.execute("SELECT status FROM users WHERE id = ?", (uid,)).fetchone()[0] == "revoked"
+    # The normal sign-in button is still refused while revoked.
+    assert _plain_login(client, monkeypatch, {"sub": "g-back", "email": "back@example.com"}).headers["Location"] \
+        == "/login/?error=ACCOUNT_REVOKED"
+    # Someone else who now controls the same address cannot take over the identity.
+    r = _admission(client, "invitation", secret2)
+    bad = _callback(client, monkeypatch, r.json["authorize_url"], r.cookies["hsm_oauth"].value,
+                    {"sub": "g-impostor", "email": "back@example.com"})
+    assert bad.headers["Location"] == "/login/?error=EMAIL_MISMATCH"
+    # The original Google account is reinstated.
+    r = _admission(client, "invitation", secret2)
+    good = _callback(client, monkeypatch, r.json["authorize_url"], r.cookies["hsm_oauth"].value,
+                     {"sub": "g-back", "email": "back@example.com"})
+    assert good.headers["Location"] == "/"
+    row = conn.execute("SELECT status, revoked_at, google_sub FROM users WHERE id = ?", (uid,)).fetchone()
+    assert tuple(row) == ("active", None, "g-back")

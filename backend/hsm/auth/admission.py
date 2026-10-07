@@ -68,14 +68,19 @@ def _invitation(conn, identity, tx, by_sub):
     if identity.email != inv["email"]:
         return None, _deny(conn, identity, "EMAIL_MISMATCH")
     user = conn.execute("SELECT * FROM users WHERE id = ?", (inv["user_id"],)).fetchone()
-    if user is None or user["status"] != "pending":
+    if user is None or user["status"] not in ("pending", "revoked"):
         return None, _deny(conn, identity, "INVITATION_INVALID")
     if by_sub is not None and by_sub["id"] != user["id"]:
         # This Google account already belongs to another user; never merge identities.
         return None, _deny(conn, identity, "EMAIL_MISMATCH")
+    if user["google_sub"] is not None and user["google_sub"] != identity.sub:
+        # Reinstating a revoked user: only the Google account bound before may come back, even if
+        # someone else now controls the same email address.
+        return None, _deny(conn, identity, "EMAIL_MISMATCH")
     now = utcnow_iso()
-    conn.execute("UPDATE users SET google_sub = ?, status = 'active', display_name = ?, updated_at = ?"
-                 " WHERE id = ? AND status = 'pending'", (identity.sub, identity.name, now, user["id"]))
+    conn.execute("UPDATE users SET google_sub = ?, status = 'active', display_name = ?, revoked_at = NULL,"
+                 " updated_at = ? WHERE id = ? AND status IN ('pending', 'revoked')",
+                 (identity.sub, identity.name, now, user["id"]))
     conn.execute("UPDATE invitations SET accepted_at = ? WHERE id = ?", (now, inv["id"]))
     audit.record(conn, action="user.invitation_accepted", outcome="succeeded", actor_id=user["id"],
                  target_type="user", target_id=user["id"], target_label=user["email"])

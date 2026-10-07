@@ -82,15 +82,16 @@ def invite(conn: sqlite3.Connection, cfg: Config, *, actor_id: str, email: str, 
         user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
         if user is not None and user["status"] == "active":
             raise Conflict("This person already has an active account.", code="USER_EXISTS")
-        if user is not None and user["status"] == "revoked":
-            raise Conflict("This account was revoked; reinstatement is not supported.", code="USER_REVOKED")
+        # A revoked user can be re-invited: the account stays revoked until the new one-time link
+        # is accepted by the *same* Google account (sub) that was bound before (see admission.py).
+        reinstating = user is not None and user["status"] == "revoked"
         if user is None:
             user_id = new_id()
             conn.execute(
                 "INSERT INTO users(id, email, display_name, role, status, quota_cpu_cores, quota_memory_bytes,"
                 " quota_disk_bytes, created_at, updated_at) VALUES (?, ?, '', ?, 'pending', ?, ?, ?, ?, ?)",
                 (user_id, email, role, quota.cpu_cores, quota.memory_bytes, quota.disk_bytes, iso(now), iso(now)))
-        else:   # re-issue for a pending user: the previous link stops working
+        else:   # re-issue for a pending user, or reinstate a revoked one: the previous link stops working
             user_id = user["id"]
             quotas.check_quota_change(conn, user_id, quota)
             conn.execute("UPDATE users SET role = ?, quota_cpu_cores = ?, quota_memory_bytes = ?, quota_disk_bytes = ?,"
@@ -105,7 +106,7 @@ def invite(conn: sqlite3.Connection, cfg: Config, *, actor_id: str, email: str, 
                      (inv_id, user_id, email, hash_secret(secret), actor_id, iso(now), expires))
         audit.record(conn, action="user.invite", outcome="succeeded", actor_id=actor_id, target_type="user",
                      target_id=user_id, target_label=email, request_id=request_id,
-                     details={"role": role, "quota": quota.as_dict()})
+                     details={"role": role, "quota": quota.as_dict(), "reinstatement": reinstating})
     return {"invitation": {"id": inv_id, "email": email, "expires_at": expires}, "user_id": user_id,
             "link": f"{cfg.public_base_url}/invite/#{secret}"}
 
