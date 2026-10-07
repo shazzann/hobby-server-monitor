@@ -11,8 +11,10 @@ Only checks that were actually run are recorded as passed. Times are Asia/Colomb
 | WSL memory | 7751 MiB total, 2048 MiB swap |
 | Python | 3.13.7 (Windows, unit tests); 3.10.12 (WSL target) |
 | Node | 22.15.0 (Windows) |
-| LXD | **not installed** (blocked: B0 disk space, B1 sudo) |
-| Disk | C: ≈0.5 GB free (B0); repository on F: |
+| LXD | 5.21.8 LTS (snap rev 40958), pool `hsm-btrfs` (btrfs, loop, 30 GiB), bridge `hsmbr0` 10.46.67.1/24, restricted project `hsm` (installed by the user with `scripts/setup-dev-host.sh` on 2026-10-07) |
+| Images | `hsm/alpine-3.22` (6cd53e54490b), `hsm/ubuntu-24.04` (ee3016f85cc4) |
+| Linux venv | `~/.venvs/hsm`, Python 3.10.12, pinned `requirements-dev.txt` |
+| Disk | C: ≈11 GB free after the user freed space; repository on F: |
 
 ## Results
 
@@ -32,6 +34,13 @@ Only checks that were actually run are recorded as passed. Times are Asia/Colomb
 Observation: the dev server on Windows shows ~200–300 ms TCP connect time per request
 (`localhost` → IPv6 first, server bound to 127.0.0.1, wsgiref without keep-alive); server
 time-to-first-byte was 2–3 ms. Performance figures will be taken on Linux, not from this setup.
+
+| 2026-10-07 06:2x | Full backend suite on **Linux Python 3.10.12** (incl. Unix-socket peer-UID test) | `~/.venvs/hsm/bin/python -m pytest -q` | **pass**: 184 passed |
+| 2026-10-07 06:2x | **Real LXD spike** on disposable `hsm-spike-d87dc7d5` (project `hsm`, deleted afterwards) | `python scripts/lxd_spike.py` | **pass** — create 502 ms; adapter-built config has only `root`+`eth0`, `security.privileged/nesting=false`, `limits.memory.swap=false`, `limits.processes=500`; **CPU hard quota verified**: 1 core × 50 % → `cpu.max` = `50000 100000`, live change to 2 × 50 % → `100000 100000`; live memory change → cgroup limit 536870912; disk grown 1024→2048 MiB live; `last_used_at` changes on restart (uptime source verified); exec as root (exit 3) and as `uid=1500(hsm)` (exit 4) with separate stdout/stderr and the fixed env; guest not in `wheel`; 64 KiB output cap → `stdout_truncated=true`; `sleep` past a 5 s deadline → `timed_out` (exit 137) for root and guest; safety evaluation of the live instance: no reasons |
+| 2026-10-07 06:3x | **Root-disk quota enforcement** (btrfs qgroups) on disposable `hsm-qcheck-a66f2b4e` | `EXEC_DEADLINE_SECONDS=5 python scripts/lxd_quota_check.py` | **pass** — `dd` of 1536 MiB into a 1024 MiB root: `dd: error writing '/root/fill': Quota exceeded` after 1013.5 MB. Note: `df` inside the container shows the whole pool, so `df` is not evidence of the quota |
+| 2026-10-07 06:3x | **No guest process survives a deadline** | same script: `sleep 300 & sleep 300` as uid 1500 | **pass** — `timed_out` after 6.2 s; `ps` afterwards: no uid-1500 processes (`none-left`) |
+
+pylxd 2.4.2 prints a harmless `UserWarning: unknown attribute "requestor" on Operation` with LXD 5.21.
 
 ### What the security tests assert (backend/tests/test_api_security.py)
 - every route declares a policy; a responder without one fails start-up;
@@ -63,7 +72,6 @@ replaced); a real Google sign-in has not been performed yet (blocked: B2).
 
 | Check | Status | Blocker |
 |---|---|---|
-| Real LXD spike (create/limits/exec/delete, CPU quota, disk quota, uptime source) | not run | B0, B1 |
 | Real Google sign-in with two accounts | not run | B2, B3 |
 | Collector/worker/frontend lanes | in progress | — |
 | Resource measurements | not run | needs LXD |
