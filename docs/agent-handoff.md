@@ -2,7 +2,8 @@
 
 Updated: 2026-10-07 14:45 +05:30
 
-- Repo `F:\Projects\robotic gen`, branch `main`, local commits only (no remote yet: B4).
+- Repo `F:\Projects\robotic gen`, branch `main`, pushed to private `origin`
+  https://github.com/shazzann/hobby-server-monitor (CI green).
 - Installed deployment on the candidate's WSL: `/opt/hsm`, `/etc/hsm/hsm.env`, `/var/lib/hsm`,
   units `hsm-api`, `hsm-worker`, `hsm-collector` (enabled). Re-run `sudo bash deploy/install.sh` after
   code changes (it restarts the units).
