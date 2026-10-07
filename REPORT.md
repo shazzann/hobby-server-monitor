@@ -67,7 +67,60 @@ Real ones, in order (details in docs/ai-usage.md and docs/verification.md):
 
 ## What You Learned
 
-(To be written by the candidate.)
+> Drafted with the AI assistant from this project's log and verification record; to be checked and
+> rewritten in the candidate's own words before submission.
+
+**Security is mostly about where the boundary sits, not about the user ID.** I expected that running
+the API as a non-root user would make it "low privilege". It would not: any process that can open the
+LXD socket can create a privileged container and mount the host's root filesystem, so `lxd` group
+membership *is* root. The useful boundary was keeping the socket away from the one process that parses
+untrusted HTTP, and proving it (`deploy/check-permissions.sh`: the API user gets `Permission denied`).
+
+**Authorization has to be impossible to forget.** Checking roles inside each handler works until someone
+adds an endpoint and forgets. Declaring a policy per route and failing start-up when one is missing
+turned "remember to check" into "cannot start without checking". The same object check also has to run
+again in the worker, because a user can be revoked between submitting a job and the job running.
+
+**"Atomic" needs a concrete mechanism.** Two requests can each fit within a quota and together exceed it.
+Checking and reserving inside one `BEGIN IMMEDIATE` SQLite transaction serializes them; a test with two
+threads racing for the last two cores showed exactly one succeeding. I also learned not to hold that
+transaction while calling LXD or Google.
+
+**A timeout is not a failure.** When a call to LXD times out, the change may or may not have happened.
+Treating that as "failed" would release quota for a container that exists. Separating *rejected* (nothing
+happened) from *uncertain* (reconcile against LXD before deciding) was the most important design idea in
+the worker, and the reason commands are never retried automatically.
+
+**LXD's settings do not always mean what they look like.** `limits.cpu.allowance: 50%` is only a soft
+share under contention; a real cap is `N×P ms / 100 ms`, which I confirmed by reading `cpu.max` inside
+the container. On btrfs, `df` inside the container shows the whole pool, so the only real evidence of a
+disk quota was writing past it and getting "Quota exceeded".
+
+**Unknown is not zero.** Missing metrics, a collector restart or a counter reset must produce gaps, not
+fabricated zeros. Rates need a monotonic clock and a valid previous sample; usage needs a coverage
+figure so a gap is never read as idle time.
+
+**Real environments find bugs that mocks cannot.** With 186 passing unit tests, the real runs still found:
+LXD's nanosecond timestamps break Python 3.10's date parser; Falcon does not split `a,b` query values;
+the dashboard read an operation envelope as the operation, so polling never stopped; the first systemd
+install failed on a missing group and on Gunicorn 26's control socket; and the collector raced LXD's
+socket at boot. One test only failed on a machine that had been up for more than an hour.
+
+**Measure instead of claiming.** "Lightweight" became numbers: about 0.14 % of one CPU and ~72 MiB for the
+three services, and the collector's cost did not change between zero and five open tabs. I also learned
+the difference between RSS (counts shared libraries in every process) and PSS (shares them fairly), and
+that systemd's cgroup accounting can measure services without root.
+
+**UX problems are often correct behaviour explained badly.** A new admin saw "Insufficient capacity" when
+the real cause was their own zero quota; a user's quota showed a container they could not see. Both were
+working as designed, but the design was surprising; the fixes were a clearer message and granting the
+owner access by default.
+
+**Working with AI agents.** Parallel agents produced a lot of code quickly, but only because the contracts
+(schema, API shapes, state keys, file ownership) were written first. Their output still needed review: a
+security review found an open redirect and a rate limit one client could exhaust for everyone. The parts
+I must be able to explain without help are the transaction boundaries, the privilege boundary, the CPU %
+formula and the exec deadline/cleanup logic.
 
 ## Bonus Features Implemented
 
